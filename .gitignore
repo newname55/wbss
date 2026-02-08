@@ -1,0 +1,9 @@
+.env
+.env.*
+config/db.php
+app/db.php
+logs/
+cache/
+tmp/
+vendor/
+.DS_Store
