@@ -15,7 +15,7 @@ if (!is_role('super_user') && !is_role('admin')) {
 
 $store_id = current_store_id();
 if ($store_id === null) {
-  header('Location: /seika-app/public/store_select.php');
+  header('Location: /wbss/public/store_select.php');
   exit;
 }
 $store_id = (int)$store_id;
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       $msg = '場所を追加しました';
       $edit_id = 0;
-      header('Location: /seika-app/public/stock/locations/index.php?msg=' . urlencode($msg));
+      header('Location: /wbss/public/stock/locations/index.php?msg=' . urlencode($msg));
       exit;
     }
 
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $st->execute([$name, $sort, $is_active, $id, $store_id]);
 
       $msg = '更新しました';
-      header('Location: /seika-app/public/stock/locations/index.php?edit_id=' . $id . '&msg=' . urlencode($msg));
+      header('Location: /wbss/public/stock/locations/index.php?edit_id=' . $id . '&msg=' . urlencode($msg));
       exit;
     }
 
@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $st->execute([$id, $store_id]);
 
       $msg = '切替しました';
-      header('Location: /seika-app/public/stock/locations/index.php?msg=' . urlencode($msg));
+      header('Location: /wbss/public/stock/locations/index.php?msg=' . urlencode($msg));
       exit;
     }
 
@@ -153,11 +153,11 @@ if ($edit_id > 0) {
   if (!$edit) $edit_id = 0;
 }
 
-$right = '<a class="btn" href="/seika-app/public/stock/index.php">在庫ランチャー</a>';
+$right = '<a class="btn" href="/wbss/public/stock/index.php">在庫ランチャー</a>';
 
 render_page_start('場所マスタ');
 render_header('場所マスタ', [
-  'back_href'  => '/seika-app/public/stock/index.php',
+  'back_href'  => '/wbss/public/stock/index.php',
   'back_label' => '← 在庫',
   'right_html' => $right,
 ]);
@@ -179,7 +179,7 @@ render_header('場所マスタ', [
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <?php if ($edit_id > 0): ?>
-          <a class="btn" href="/seika-app/public/stock/locations/index.php">＋ 新規追加へ</a>
+          <a class="btn" href="/wbss/public/stock/locations/index.php">＋ 新規追加へ</a>
         <?php endif; ?>
       </div>
     </div>
@@ -264,7 +264,7 @@ render_header('場所マスタ', [
               </td>
               <td style="padding:8px; border-bottom:1px solid var(--line); white-space:nowrap;"><?= h((string)$r['updated_at']) ?></td>
               <td style="padding:8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap;">
-                <a class="btn" style="min-height:38px; padding:8px 10px;" href="/seika-app/public/stock/locations/index.php?edit_id=<?= (int)$r['id'] ?>">編集</a>
+                <a class="btn" style="min-height:38px; padding:8px 10px;" href="/wbss/public/stock/locations/index.php?edit_id=<?= (int)$r['id'] ?>">編集</a>
 
                 <form method="post" style="display:inline-block; margin:0 0 0 6px;">
                   <?= csrf_field() ?>

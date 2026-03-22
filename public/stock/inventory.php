@@ -13,7 +13,7 @@ if (!is_role('super_user') && !is_role('admin') && !is_role('manager') && !is_ro
 
 $store_id = current_store_id();
 if ($store_id === null) {
-  header('Location: /seika-app/public/store_select.php');
+  header('Location: /wbss/public/store_select.php');
   exit;
 }
 $store_id = (int)$store_id;
@@ -37,8 +37,8 @@ $err = '';
 /* =========================
    image_path -> <img src> 正規化
    DBの保存値が
-   - "/seika-app/public/uploads/..." (OK)
-   - "seika-app/public/uploads/..." (先頭/なし)
+   - "/wbss/public/uploads/..." (OK)
+   - "wbss/public/uploads/..." (先頭/なし)
    - "uploads/..." (相対)
    - "http(s)://..." (外部)
    など混在しても表示できるようにする
@@ -47,20 +47,42 @@ function normalize_image_src(?string $path): string {
   $p = trim((string)$path);
   if ($p === '') return '';
 
-  // 外部URL
-  if (preg_match('#^https?://#i', $p)) return $p;
+  // 絶対URLは path を見て wbss 側へ寄せる
+  if (preg_match('#^https?://#i', $p)) {
+    $parts = parse_url($p);
+    $urlPath = (string)($parts['path'] ?? '');
+    if ($urlPath !== '') {
+      if (str_starts_with($urlPath, '/seika-app/public/')) {
+        return '/wbss/public/' . ltrim(substr($urlPath, strlen('/seika-app/public/')), '/');
+      }
+      if (str_starts_with($urlPath, '/wbss/public/')) {
+        return $urlPath;
+      }
+      if (str_starts_with($urlPath, '/uploads/')) {
+        return '/wbss/public' . $urlPath;
+      }
+    }
+    return $p;
+  }
 
   // すでにサイトルート
-  if ($p[0] === '/') return $p;
+  if ($p[0] === '/') {
+    if (str_starts_with($p, '/seika-app/public/')) {
+      return '/wbss/public/' . ltrim(substr($p, strlen('/seika-app/public/')), '/');
+    }
+    return $p;
+  }
 
-  // "seika-app/public/..." の形（先頭スラ無し）
-  if (str_starts_with($p, 'seika-app/public/')) return '/' . $p;
+  // "wbss/public/..." の形（先頭スラ無し）
+  if (str_starts_with($p, 'wbss/public/')) return '/' . $p;
+  // 旧アプリ名の "*/public/..." 形式も wbss 側へ寄せる
+  if (preg_match('#^[^/]+/public/(.+)$#', $p, $m)) return '/wbss/public/' . ltrim((string)$m[1], '/');
 
   // "uploads/..." の形（public配下想定）
-  if (str_starts_with($p, 'uploads/')) return '/seika-app/public/' . $p;
+  if (str_starts_with($p, 'uploads/')) return '/wbss/public/' . $p;
 
   // その他は public 配下に寄せる（最後の保険）
-  return '/seika-app/public/' . ltrim($p, '/');
+  return '/wbss/public/' . ltrim($p, '/');
 }
 
 /* =========================
@@ -115,6 +137,40 @@ function get_or_create_inventory_session(PDO $pdo, int $store_id, int $location_
   $note  = null;
   $ins->execute([$store_id, $location_id, $date, $title, $note, $created_by]);
   return (int)$pdo->lastInsertId();
+}
+
+function sync_stock_item_total(PDO $pdo, int $store_id, int $product_id): int {
+  $sumSt = $pdo->prepare("
+    SELECT COALESCE(SUM(qty), 0)
+    FROM stock_item_locations
+    WHERE store_id = ? AND product_id = ?
+  ");
+  $sumSt->execute([$store_id, $product_id]);
+  $total_qty = (int)$sumSt->fetchColumn();
+
+  $itemSt = $pdo->prepare("
+    SELECT id
+    FROM stock_items
+    WHERE store_id = ? AND product_id = ?
+    FOR UPDATE
+  ");
+  $itemSt->execute([$store_id, $product_id]);
+  $item_id = (int)$itemSt->fetchColumn();
+
+  if ($item_id > 0) {
+    $pdo->prepare("
+      UPDATE stock_items
+      SET qty = ?
+      WHERE id = ?
+    ")->execute([$total_qty, $item_id]);
+  } else {
+    $pdo->prepare("
+      INSERT INTO stock_items (store_id, product_id, qty)
+      VALUES (?, ?, ?)
+    ")->execute([$store_id, $product_id, $total_qty]);
+  }
+
+  return $total_qty;
 }
 
 /* =========================
@@ -199,9 +255,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           ($created_by > 0 ? $created_by : null),
         ]);
 
+        // 場所別在庫を正本として、店全体サマリ stock_items も同一TXで同期する。
+        $store_total_qty = sync_stock_item_total($pdo, $store_id, $product_id);
+
         $pdo->commit();
 
-        $msg = "棚卸OK（場所#{$location_id}）: 実数 {$counted_qty} / 以前 {$cur_qty} / 差分 {$delta}";
+        $msg = "棚卸OK（場所#{$location_id}）: 実数 {$counted_qty} / 以前 {$cur_qty} / 差分 {$delta} / 店合計 {$store_total_qty}";
       } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         $err = $e->getMessage();
@@ -213,7 +272,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($q !== '') $qs['q'] = $q;
   if ($ptype !== '') $qs['ptype'] = $ptype;
 
-  header('Location: /seika-app/public/stock/inventory.php?' . http_build_query($qs));
+  header('Location: /wbss/public/stock/inventory.php?' . http_build_query($qs));
   exit;
 }
 
@@ -254,11 +313,11 @@ $st = $pdo->prepare($sql);
 $st->execute(array_merge([$store_id, $location_id], $args));
 $items = $st->fetchAll();
 
-$right = '<a class="btn" href="/seika-app/public/stock/index.php">在庫ランチャー</a>';
+$right = '<a class="btn" href="/wbss/public/stock/index.php">在庫ランチャー</a>';
 
 render_page_start('棚卸（場所別）');
 render_header('棚卸（場所別）', [
-  'back_href' => '/seika-app/public/stock/index.php',
+  'back_href' => '/wbss/public/stock/index.php',
   'back_label' => '← 在庫',
   'right_html' => $right,
 ]);

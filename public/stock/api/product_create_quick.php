@@ -19,6 +19,7 @@ if ($store_id === null) {
   echo json_encode(['ok'=>false,'error'=>'store not selected']);
   exit;
 }
+$store_id = (int)$store_id;
 
 $raw = file_get_contents('php://input');
 $in = json_decode($raw, true);
@@ -50,8 +51,8 @@ $pdo = db();
 try {
   // 既に同じbarcodeがあるならそれを返す（重複防止）
   if ($barcode !== '') {
-    $st = $pdo->prepare("SELECT id FROM stock_products WHERE barcode = ? AND is_active=1 LIMIT 1");
-    $st->execute([$barcode]);
+    $st = $pdo->prepare("SELECT id FROM stock_products WHERE store_id = ? AND barcode = ? AND is_active=1 LIMIT 1");
+    $st->execute([$store_id, $barcode]);
     if ($r = $st->fetch()) {
       echo json_encode(['ok'=>true,'id'=>(int)$r['id'],'note'=>'exists']);
       exit;
@@ -59,10 +60,10 @@ try {
   }
 
   $st = $pdo->prepare("
-    INSERT INTO stock_products (name, unit, barcode, is_active)
-    VALUES (?, ?, ?, 1)
+    INSERT INTO stock_products (store_id, name, unit, barcode, is_active)
+    VALUES (?, ?, ?, ?, 1)
   ");
-  $st->execute([$name, $unit, ($barcode===''?null:$barcode)]);
+  $st->execute([$store_id, $name, $unit, ($barcode===''?null:$barcode)]);
 
   echo json_encode(['ok'=>true,'id'=>(int)$pdo->lastInsertId()]);
 } catch (Throwable $e) {

@@ -13,7 +13,7 @@ if (!is_role('super_user') && !is_role('admin') && !is_role('manager')) {
 
 $store_id = current_store_id();
 if ($store_id === null) {
-  header('Location: /seika-app/public/store_select.php');
+  header('Location: /wbss/public/store_select.php');
   exit;
 }
 $store_id = (int)$store_id;
@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $pdo->prepare($sql)->execute($vals);
 
       $msg = 'OK: 追加しました';
-      header('Location: /seika-app/public/stock/categories/index.php?ok=1');
+      header('Location: /wbss/public/stock/categories/index.php?ok=1');
       exit;
 
     } elseif ($action === 'update') {
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $sql = "UPDATE {$table} SET " . implode(', ', $sets) . " WHERE {$where} LIMIT 1";
       $pdo->prepare($sql)->execute($vals);
 
-      header('Location: /seika-app/public/stock/categories/index.php?edit=' . $id . '&ok=1');
+      header('Location: /wbss/public/stock/categories/index.php?edit=' . $id . '&ok=1');
       exit;
 
     } elseif ($action === 'toggle') {
@@ -117,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $st2 = $pdo->prepare("UPDATE {$table} SET is_active=? WHERE {$where} LIMIT 1");
       $st2->execute([$new, ...$vals]);
 
-      header('Location: /seika-app/public/stock/categories/index.php?ok=1');
+      header('Location: /wbss/public/stock/categories/index.php?ok=1');
       exit;
 
     } elseif ($action === 'reorder') {
@@ -145,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
 
       $pdo->commit();
-      header('Location: /seika-app/public/stock/categories/index.php?ok=1');
+      header('Location: /wbss/public/stock/categories/index.php?ok=1');
       exit;
 
     } else {
@@ -193,11 +193,11 @@ if ($edit_id > 0) {
 $ok = (int)($_GET['ok'] ?? 0);
 if ($ok === 1 && $msg === '' && $err === '') $msg = '保存しました';
 
-$right = '<a class="btn" href="/seika-app/public/stock/index.php">在庫ランチャー</a>';
+$right = '<a class="btn" href="/wbss/public/stock/index.php">在庫ランチャー</a>';
 
 render_page_start('カテゴリ');
 render_header('カテゴリ', [
-  'back_href'  => '/seika-app/public/stock/index.php',
+  'back_href'  => '/wbss/public/stock/index.php',
   'back_label' => '← 在庫',
   'right_html' => $right,
 ]);
@@ -233,7 +233,7 @@ render_header('カテゴリ', [
           </div>
           <div>
             <button class="btn btn-primary" type="submit">検索</button>
-            <a class="btn" href="/seika-app/public/stock/categories/index.php">クリア</a>
+            <a class="btn" href="/wbss/public/stock/categories/index.php">クリア</a>
           </div>
         </form>
       </div>
@@ -265,7 +265,7 @@ render_header('カテゴリ', [
               background: <?= $isEditing ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent' ?>;
             ">
               <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:space-between;">
-                <a href="/seika-app/public/stock/categories/index.php?edit=<?= $id ?><?= $q!=='' ? '&q='.urlencode($q) : '' ?>"
+                <a href="/wbss/public/stock/categories/index.php?edit=<?= $id ?><?= $q!=='' ? '&q='.urlencode($q) : '' ?>"
                    class="btn"
                    style="flex:1; justify-content:flex-start; gap:12px; min-width:260px;">
                   <span style="display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:14px; border:1px solid var(--line); background:rgba(255,255,255,.04); font-weight:1000;">
@@ -313,7 +313,7 @@ render_header('カテゴリ', [
         <?php if ($has_sort && $cats): ?>
           <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
             <button class="btn btn-primary" type="submit">並び保存</button>
-            <a class="btn" href="/seika-app/public/stock/categories/index.php">再読込</a>
+            <a class="btn" href="/wbss/public/stock/categories/index.php">再読込</a>
           </div>
         <?php endif; ?>
       </form>
@@ -324,7 +324,7 @@ render_header('カテゴリ', [
       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
         <div style="font-weight:1000; font-size:16px;"><?= $edit ? '編集' : '追加' ?></div>
         <?php if ($edit): ?>
-          <a class="btn" href="/seika-app/public/stock/categories/index.php">＋ 新規</a>
+          <a class="btn" href="/wbss/public/stock/categories/index.php">＋ 新規</a>
         <?php endif; ?>
       </div>
 
@@ -371,7 +371,7 @@ render_header('カテゴリ', [
         <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn btn-primary" type="submit"><?= $edit ? '更新する' : '追加する' ?></button>
           <?php if ($edit): ?>
-            <a class="btn" href="/seika-app/public/stock/categories/index.php?edit=<?= (int)$cur['id'] ?>">再読込</a>
+            <a class="btn" href="/wbss/public/stock/categories/index.php?edit=<?= (int)$cur['id'] ?>">再読込</a>
           <?php endif; ?>
         </div>
 

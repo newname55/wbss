@@ -14,11 +14,31 @@ function conf(string $key): string {
   $v = getenv($key);
   return is_string($v) ? $v : '';
 }
+function current_origin(): string {
+  $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || ((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+  $scheme = $https ? 'https' : 'http';
+  $host = trim((string)($_SERVER['HTTP_HOST'] ?? ''));
+  return $host !== '' ? ($scheme . '://' . $host) : '';
+}
+function normalize_line_redirect_uri(string $uri): string {
+  $uri = trim($uri);
+  if ($uri !== '') {
+    $uri = preg_replace('#/seika-app/public/line_callback\.php$#', '/wbss/public/line_callback.php', $uri) ?? $uri;
+  }
+  if ($uri === '') {
+    $origin = current_origin();
+    if ($origin !== '') {
+      $uri = $origin . '/wbss/public/line_callback.php';
+    }
+  }
+  return $uri;
+}
 function h(string $s): string {
   return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }
 function redirect_login(string $qs=''): never {
-  header('Location: /seika-app/public/login.php' . ($qs ? ('?' . $qs) : ''));
+  header('Location: /wbss/public/login.php' . ($qs ? ('?' . $qs) : ''));
   exit;
 }
 
@@ -45,7 +65,7 @@ unset($_SESSION['line_oauth_state']);
 ========================= */
 $channelId     = conf('LINE_CHANNEL_ID');
 $channelSecret = conf('LINE_CHANNEL_SECRET');
-$redirectUri   = conf('LINE_REDIRECT_URI');
+$redirectUri   = normalize_line_redirect_uri(conf('LINE_REDIRECT_URI'));
 
 if ($channelId === '' || $channelSecret === '' || $redirectUri === '') {
   http_response_code(500);
@@ -99,9 +119,16 @@ $pdo = db();
 /* =========================
    招待トークン（startで保存済み）
 ========================= */
-$invite = trim((string)($_SESSION['line_invite_token'] ?? ''));
-error_log('[line_callback] invite=' . ($invite !== '' ? $invite : 'EMPTY'));
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 
+$invite = trim((string)($_GET['invite'] ?? ''));
+if ($invite === '') {
+  $invite = trim((string)($_SESSION['invite'] ?? ''));
+}
+$linkTargetUserId = (int)($_SESSION['line_link_target_user_id'] ?? 0);
+
+// ログ
+error_log('[line_callback] invite=' . ($invite !== '' ? 'SET' : 'EMPTY'));
 /* =========================
    既存の LINE 紐付けを取得
    （is_active=0 も含めて取得）
@@ -280,12 +307,67 @@ body{margin:0;background:#0b1020;color:#e8ecff;font-family:system-ui;}
     <div class="card">
       <div class="ok">✅ 登録が完了しました</div>
       <div class="muted">このまま画面を閉じてOKです。</div>
-      <a class="btn" href="/seika-app/public/dashboard.php">ダッシュボードへ</a>
+      <a class="btn" href="/wbss/public/dashboard.php">ダッシュボードへ</a>
     </div>
   </div>
 </body>
 </html>
 <?php
+    exit;
+  }
+
+  /* ===== 管理画面からの LINE 連携 ===== */
+  if ($linkTargetUserId > 0) {
+    $st = $pdo->prepare("
+      SELECT id, display_name, is_active
+      FROM users
+      WHERE id = ?
+      LIMIT 1
+    ");
+    $st->execute([$linkTargetUserId]);
+    $targetUser = $st->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$targetUser) {
+      unset($_SESSION['line_link_target_user_id']);
+      http_response_code(404);
+      exit('連携対象ユーザーが見つかりません');
+    }
+
+    if ($userId > 0 && $userId !== $linkTargetUserId) {
+      unset($_SESSION['line_link_target_user_id']);
+      http_response_code(400);
+      exit('このLINEは既に別ユーザーに連携されています');
+    }
+
+    $pdo->beginTransaction();
+
+    $pdo->prepare("
+      UPDATE user_identities
+      SET is_active = 0
+      WHERE user_id = ?
+        AND provider = 'line'
+    ")->execute([$linkTargetUserId]);
+
+    $pdo->prepare("
+      INSERT INTO user_identities
+        (user_id, provider, provider_user_id, display_name, picture_url, linked_at, last_login_at, is_active)
+      VALUES
+        (?, 'line', ?, ?, ?, NOW(), NOW(), 1)
+      ON DUPLICATE KEY UPDATE
+        user_id = VALUES(user_id),
+        display_name = VALUES(display_name),
+        picture_url = VALUES(picture_url),
+        last_login_at = NOW(),
+        is_active = 1
+    ")->execute([$linkTargetUserId, $lineUserId, $displayName, $pictureUrl]);
+
+    $pdo->commit();
+    unset($_SESSION['line_link_target_user_id']);
+    unset($_SESSION['invite']);
+    $_SESSION['line_link_complete'] = [
+      'target_user_name' => (string)($targetUser['display_name'] ?? ('#' . $linkTargetUserId)),
+      'line_user_id' => $lineUserId,
+    ];
+    header('Location: /wbss/public/line_link_complete.php');
     exit;
   }
 
@@ -301,7 +383,7 @@ body{margin:0;background:#0b1020;color:#e8ecff;font-family:system-ui;}
   }
 
   login_user_by_id($userId);
-  header('Location: /seika-app/public/gate.php');
+  header('Location: /wbss/public/gate.php');
   exit;
 
 } catch (Throwable $e) {

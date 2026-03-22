@@ -1,13 +1,13 @@
 {
-  "name": "Seika",
-  "short_name": "Seika",
-  "start_url": "/seika-app/public/dashboard.php",
-  "scope": "/seika-app/public/",
+  "name": "WB支援システム",
+  "short_name": "WBSS",
+  "start_url": "/wbss/public/dashboard.php",
+  "scope": "/wbss/public/",
   "display": "standalone",
   "background_color": "#0b1220",
   "theme_color": "#0b1220",
   "icons": [
-    { "src": "/seika-app/public/assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/seika-app/public/assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/wbss/public/assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/wbss/public/assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }

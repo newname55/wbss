@@ -118,8 +118,8 @@ $rows = $st->fetchAll();
 
 <h1>カテゴリマスタ管理（酒種）</h1>
 <p>
-  <a href="/seika-app/public/stock/index.php">← 在庫メニュー</a> /
-  <a href="/seika-app/public/dashboard.php">← ダッシュボード</a>
+  <a href="/wbss/public/stock/index.php">← 在庫メニュー</a> /
+  <a href="/wbss/public/dashboard.php">← ダッシュボード</a>
 </p>
 
 <?php if ($msg): ?><div class="msg"><?= h($msg) ?></div><?php endif; ?>

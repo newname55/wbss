@@ -13,6 +13,10 @@ if (!is_role('super_user') && !is_role('admin') && !is_role('manager')) {
   exit;
 }
 
+$store_id = current_store_id();
+if ($store_id === null) jout(['ok'=>false,'error'=>'store not selected']);
+$store_id = (int)$store_id;
+
 function jout(array $a): void {
   echo json_encode($a, JSON_UNESCAPED_UNICODE);
   exit;
@@ -51,14 +55,14 @@ if ($has_ptype) {
 
 try {
   // barcode重複チェック
-  $st = $pdo->prepare("SELECT id FROM stock_products WHERE barcode = ? LIMIT 1");
-  $st->execute([$barcode]);
+  $st = $pdo->prepare("SELECT id FROM stock_products WHERE store_id = ? AND barcode = ? LIMIT 1");
+  $st->execute([$store_id, $barcode]);
   if ($st->fetch()) jout(['ok'=>false,'error'=>'そのバーコードは既に登録されています']);
 
   // category_idがあれば存在確認（任意）
   if ($category_id > 0) {
-    $st = $pdo->prepare("SELECT id FROM stock_categories WHERE id=? LIMIT 1");
-    $st->execute([$category_id]);
+    $st = $pdo->prepare("SELECT id FROM stock_categories WHERE id=? AND (store_id = ? OR store_id IS NULL) LIMIT 1");
+    $st->execute([$category_id, $store_id]);
     if (!$st->fetch()) $category_id = 0;
   }
 
@@ -68,19 +72,19 @@ try {
   if ($has_ptype) {
     $st = $pdo->prepare("
       INSERT INTO stock_products
-        (name, unit, barcode, category_id, product_type, search_text, is_active)
+        (store_id, name, unit, barcode, category_id, product_type, search_text, is_active)
       VALUES
-        (?, ?, ?, ?, ?, ?, 1)
+        (?, ?, ?, ?, ?, ?, ?, 1)
     ");
-    $st->execute([$name, $unit, $barcode, ($category_id>0?$category_id:null), $product_type, $search_text]);
+    $st->execute([$store_id, $name, $unit, $barcode, ($category_id>0?$category_id:null), $product_type, $search_text]);
   } else {
     $st = $pdo->prepare("
       INSERT INTO stock_products
-        (name, unit, barcode, category_id, search_text, is_active)
+        (store_id, name, unit, barcode, category_id, search_text, is_active)
       VALUES
-        (?, ?, ?, ?, ?, 1)
+        (?, ?, ?, ?, ?, ?, 1)
     ");
-    $st->execute([$name, $unit, $barcode, ($category_id>0?$category_id:null), $search_text]);
+    $st->execute([$store_id, $name, $unit, $barcode, ($category_id>0?$category_id:null), $search_text]);
   }
 
   $new_id = (int)$pdo->lastInsertId();

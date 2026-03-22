@@ -9,7 +9,7 @@ require_role(['super_user','admin']);
 
 render_page_start('管理ランチャー');
 render_header('管理ランチャー', [
-  'back_href'  => '/seika-app/public/dashboard.php',
+  'back_href'  => '/wbss/public/dashboard.php',
   'back_label' => '← ダッシュボード',
 ]);
 
@@ -31,7 +31,7 @@ render_header('管理ランチャー', [
     </div>
 
     <div class="grid3" style="margin-top:14px;">
-      <a class="tile tile-primary" href="/seika-app/public/admin_users.php">
+      <a class="tile tile-primary" href="/wbss/public/admin_users.php">
         <div class="tile__icon">👤</div>
         <div class="tile__main">
           <div class="tile__title">ユーザー管理</div>
@@ -40,7 +40,7 @@ render_header('管理ランチャー', [
         <div class="tile__hint">最重要</div>
       </a>
 
-      <a class="tile" href="/seika-app/public/store_select.php">
+      <a class="tile" href="/wbss/public/store_select.php">
         <div class="tile__icon">🏪</div>
         <div class="tile__main">
           <div class="tile__title">店舗選択</div>
@@ -49,7 +49,7 @@ render_header('管理ランチャー', [
         <div class="tile__hint">切替</div>
       </a>
 
-      <a class="tile" href="/seika-app/public/stock/index.php">
+      <a class="tile" href="/wbss/public/stock/index.php">
         <div class="tile__icon">📦</div>
         <div class="tile__main">
           <div class="tile__title">在庫ランチャー</div>
@@ -60,7 +60,16 @@ render_header('管理ランチャー', [
     </div>
 
     <div class="grid3" style="margin-top:12px;">
-      <a class="tile tile-good" href="/seika-app/public/line_login_start.php?mode=link&return=<?= urlencode('/seika-app/public/admin/index.php') ?>">
+      <a class="tile tile-primary" href="/wbss/public/applicants/index.php">
+        <div class="tile__icon">🧾</div>
+        <div class="tile__main">
+          <div class="tile__title">面接者一覧</div>
+          <div class="tile__desc">面接台帳、体験入店、在籍、店舗移動を管理する</div>
+        </div>
+        <div class="tile__hint">採用</div>
+      </a>
+
+      <a class="tile tile-good" href="/wbss/public/line_login_start.php?mode=link&return=<?= urlencode('/wbss/public/admin/index.php') ?>">
         <div class="tile__icon">🔗</div>
         <div class="tile__main">
           <div class="tile__title">自分のLINE連携</div>

@@ -20,7 +20,7 @@ function qr_url(string $text, int $size = 320): string {
 // QRに埋め込むURL（LINEログイン開始）
 $inviteUrl =
   'https://ss5456ds1fds2f1dsf.asuscomm.com'
-  . '/seika-app/public/line_login_start.php'
+  . '/wbss/public/line_login_start.php'
   . '?invite=' . urlencode($invite);
 ?>
 <!doctype html>

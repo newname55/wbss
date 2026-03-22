@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>オモテダケ占い</title>
+
+<style>
+
+:root{
+  --bg1:#2a2a72;
+  --bg2:#5f4bb6;
+  --bg3:#ff9ad5;
+  --txt:#ffffff;
+}
+
+/* 背景 */
+
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:"Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+  color:var(--txt);
+
+  background:
+    radial-gradient(circle at 10% 20%, rgba(255,255,255,.45) 0 2px, transparent 3px),
+    radial-gradient(circle at 85% 25%, rgba(255,255,255,.35) 0 2px, transparent 3px),
+    radial-gradient(circle at 30% 80%, rgba(255,255,255,.25) 0 2px, transparent 3px),
+    linear-gradient(180deg,var(--bg1),var(--bg2),var(--bg3));
+
+  text-align:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* コンテナ */
+
+.container{
+  max-width:700px;
+  padding:40px 20px;
+}
+
+/* ヘッダー */
+
+.header img{
+  width:800px;
+  margin-bottom:20px;
+}
+
+/* キャラ */
+
+.omote{
+  margin:20px 0;
+}
+
+.omote img{
+  width:500px;
+  filter:drop-shadow(0 10px 20px rgba(0,0,0,.3));
+}
+
+/* コピー */
+
+.title{
+  font-size:28px;
+  font-weight:bold;
+  margin:20px 0 10px;
+}
+
+.desc{
+  font-size:16px;
+  opacity:.9;
+  margin-bottom:30px;
+}
+
+/* 占いメニュー */
+
+.menu{
+  display:flex;
+  justify-content:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:30px;
+}
+
+.menu span{
+  background:rgba(255,255,255,.2);
+  padding:6px 12px;
+  border-radius:20px;
+  font-size:14px;
+}
+
+/* ボタン */
+
+.cta{
+  display:inline-block;
+  padding:16px 36px;
+  border-radius:40px;
+
+  background:linear-gradient(135deg,#ffd86f,#ff9ad5);
+  color:white;
+
+  font-weight:bold;
+  text-decoration:none;
+  font-size:18px;
+
+  box-shadow:0 8px 20px rgba(0,0,0,.3);
+  transition:.2s;
+}
+
+.cta:hover{
+  transform:translateY(-3px);
+}
+
+.omote img{
+  width:500px;
+  animation: omoteFloat 3s ease-in-out infinite;
+  filter: drop-shadow(0 15px 25px rgba(0,0,0,.35));
+}
+
+@keyframes omoteFloat{
+
+  0%{
+    transform:translateY(0px);
+  }
+
+  50%{
+    transform:translateY(-14px);
+  }
+
+  100%{
+    transform:translateY(0px);
+  }
+
+}
+.omote{
+  position:relative;
+  display:inline-block;
+}
+
+.omote::after{
+  content:"✨ ⭐ 🌟";
+  position:absolute;
+  top:120px;
+  left:-20px;
+  font-size:30px;
+  animation: sparkle 2s linear infinite;
+}
+
+@keyframes sparkle{
+
+  0%{
+    transform:translateY(0);
+    opacity:0;
+  }
+
+  50%{
+    opacity:1;
+  }
+
+  100%{
+    transform:translateY(-30px);
+    opacity:0;
+  }
+
+}
+.cta:active{
+ transform:scale(.96);
+}
+
+/* Responsive: 手のひらサイズ（スマホ）向け調整 */
+@media (max-width:600px){
+  .container{
+    max-width:100%;
+    padding:20px 16px;
+  }
+  body{
+    align-items:flex-start;
+    padding-top:20px;
+    padding-bottom:20px;
+  }
+  .header img{
+    width:100%;
+    max-width:360px;
+    height:auto;
+    margin-bottom:16px;
+  }
+  .omote img{
+    width:100%;
+    max-width:300px;
+  }
+  .title{
+    font-size:22px;
+    margin:16px 0 8px;
+  }
+  .desc{
+    font-size:18px;
+    line-height:1.6;
+    margin-bottom:18px;
+  }
+  .menu{
+    gap:8px;
+  }
+  .menu span{
+    padding:8px 10px;
+    font-size:13px;
+    border-radius:16px;
+  }
+  .cta{
+    padding:14px 28px;
+    font-size:18px;
+  }
+  .omote::after{
+    top:90px;
+    left:-10px;
+    font-size:20px;
+  }
+}
+
+@media (max-width:360px){
+  .title{ font-size:20px; }
+  .desc{ font-size:16px; }
+  .cta{ padding:12px 20px; font-size:16px; }
+  .omote::after{ display:none; }
+}
+
+</style>
+</head>
+
+
+<body>
+
+<div class="container">
+
+<div class="header">
+<img src="./images/header-main.png" alt="オモテダケ占い">
+</div>
+
+<div class="omote">
+<img src="./images/omotedake-main.png" alt="オモテダケ">
+</div>
+
+<div class="title">
+キミの運命、のぞいてみるダケ！🍄
+</div>
+<div class="desc">
+<a class="cta" href="fortune.php">
+🔮 占ってみる
+</a>
+</div>
+<div class="desc">
+今日の運勢も恋の行方も<br>
+オモテダケがふんわり占うよ。
+</div>
+<div class="desc">
+<a class="cta" href="omotechat.php">
+🗣️ お話ししてみる
+</a>
+</div>
+<div class="desc">
+<a class="cta" href="omoteaichat.php">
+🗣️ AIなオモテダケワールドお話ししてみる
+</a>
+</div>
+<div class="fortune-menu">
+  <span>⭐ 今日の運勢</span>
+  <span>💖 恋愛占い</span>
+  <a href="/wbss/public/login.php">📈 仕事運</a>
+  <span>💰 金運</span>
+  <span>✨ 相性占い</span>
+</div>
+
+
+<div class="footer">
+© オモテダケ占い
+</div>
+
+</div>
+<style>
+.fortune-menu{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:16px;
+  flex-wrap:wrap;
+  margin-top:20px;
+}
+
+.fortune-menu span,
+.fortune-menu a{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 14px;
+  border-radius:20px;
+  font-size:14px;
+  background:rgba(255,255,255,0.2);
+  color:white;
+  text-decoration:none;
+}
+</style>
+</body>
+</html>

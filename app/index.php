@@ -1,11 +1,9 @@
-require_once __DIR__ . '/../../app/auth.php';
-require_once __DIR__ . '/../../app/store.php';
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/auth.php';
+
 require_login();
-if (!is_role('super_user') && !is_role('admin') && !is_role('manager')) {
-  http_response_code(403);
-  exit('Forbidden');
-}
-if (current_store_id() === null) {
-  header('Location: /seika-app/public/store_select.php');
-  exit;
-}
+
+header('Location: /wbss/public/gate.php', true, 302);
+exit;

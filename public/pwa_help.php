@@ -8,7 +8,7 @@ require_login();
 
 render_page_start('PWA手順');
 render_header('PWA（ホームに追加）手順', [
-  'back_href' => '/seika-app/public/dashboard.php',
+  'back_href' => '/wbss/public/dashboard.php',
   'back_label' => '← ランチャー',
 ]);
 ?>
@@ -19,12 +19,12 @@ render_header('PWA（ホームに追加）手順', [
       <li>Safariでこのサイトを開く（HTTPSのURL）</li>
       <li>下の <b>共有ボタン</b>（四角＋↑）を押す</li>
       <li><b>「ホーム画面に追加」</b> を選ぶ</li>
-      <li>ホームにできた <b>Seika</b> アイコンから起動する</li>
+      <li>ホームにできた <b>WBSS</b> アイコンから起動する</li>
     </ol>
 
     <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="btn btn-primary" href="/seika-app/public/stock/move.php">スキャン画面へ</a>
-      <a class="btn" href="/seika-app/public/dashboard.php">ランチャーへ</a>
+      <a class="btn btn-primary" href="/wbss/public/stock/move.php">スキャン画面へ</a>
+      <a class="btn" href="/wbss/public/dashboard.php">ランチャーへ</a>
     </div>
 
     <div class="card" style="margin-top:14px;">

@@ -1,0 +1,57 @@
+diff --git a/public/cashier/index.php b/public/cashier/index.php
+--- a/public/cashier/index.php
++++ b/public/cashier/index.php
+@@ -219,11 +219,29 @@
+     <?php foreach ($tickets as $t): ?>
+       <?php
+-        $stt = (string)$t['status'];
+-        $badge = ($stt === 'paid') ? 'done' : (($stt === 'void') ? 'ng' : 'open');
++        $stt = (string)($t['status'] ?? '');
++
++        // status表示：英語 → 日本語 + 色分け（分かりやすく）
++        // open   = 未精算
++        // locked = 精算待ち（確定済み）
++        // paid   = 入金完了
++        // void   = 取消
++        $status_label = $stt;
++        $badge = 'unpaid';
++        if ($stt === 'paid') {
++          $status_label = '入金完了';
++          $badge = 'paid';
++        } elseif ($stt === 'locked') {
++          $status_label = '精算待ち';
++          $badge = 'locked';
++        } elseif ($stt === 'void') {
++          $status_label = '取消';
++          $badge = 'void';
++        } else { // open or unknown
++          $status_label = '未精算';
++          $badge = 'unpaid';
++        }
+ 
+         $tot = read_totals($t['totals_snapshot'] ?? null);
+       ?>
+@@ -240,7 +258,10 @@
+           </div>
+ 
+           <div style="text-align:right;">
+-            <div class="badge <?= h($badge) ?>"><?= h($stt) ?></div>
++            <div class="badge <?= h($badge) ?>" title="<?= h($stt) ?>">
++              <?= h($status_label) ?>
++            </div>
+             <div style="font-weight:1000;margin-top:6px;">¥<?= number_format((int)$tot['total']) ?></div>
+             <div class="muted" style="font-size:12px;">(税 ¥<?= number_format((int)$tot['tax']) ?>)</div>
+           </div>
+@@ -283,9 +304,10 @@
+   padding:6px 10px; border-radius:999px; border:1px solid var(--line);
+   font-weight:1000; font-size:12px;
+ }
+-.badge.open{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.25); }
+-.badge.done{ background: rgba(59,130,246,.12); border-color: rgba(59,130,246,.25); }
+-.badge.ng{ background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.25); }
++.badge.unpaid{ background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.30); } /* 未精算：オレンジ */
++.badge.locked{ background: rgba(168,85,247,.14); border-color: rgba(168,85,247,.30); } /* 精算待ち：紫 */
++.badge.paid{   background: rgba(34,197,94,.14);  border-color: rgba(34,197,94,.30); }  /* 入金完了：緑 */
++.badge.void{   background: rgba(239,68,68,.14);  border-color: rgba(239,68,68,.30); }  /* 取消：赤 */
+ </style>
+ <?php render_page_end(); ?>

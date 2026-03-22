@@ -16,35 +16,46 @@ function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8')
 
 $pdo = db();
 
-/** ✅ store_id 必須保証（store.php に無くてもこのファイルで保証する） */
-if (!function_exists('require_store_selected')) {
-  function require_store_selected(): int {
+/** 商品編集ページ用の店舗必須保証 */
+if (!function_exists('require_stock_product_edit_store_selected')) {
+  function require_stock_product_edit_store_selected(): int {
+    if (function_exists('require_store_selected')) {
+      return (int)require_store_selected('/wbss/public/stock/products/edit.php');
+    }
     if (session_status() !== PHP_SESSION_ACTIVE) {
       session_start();
     }
     $sid = (int)($_SESSION['store_id'] ?? 0);
     if ($sid <= 0) {
-      header('Location: /seika-app/public/store_select.php');
+      header('Location: /wbss/public/store_select.php?return=' . rawurlencode('/wbss/public/stock/products/edit.php'));
       exit;
     }
     return $sid;
   }
 }
 
-$store_id = (int)require_store_selected();
+$store_id = (int)require_stock_product_edit_store_selected();
+$canEditPrices = can_edit_master();
+$hasPurchasePrice = col_exists($pdo, 'stock_products', 'purchase_price_yen');
+$hasSellingPrice = col_exists($pdo, 'stock_products', 'selling_price_yen');
+$hasBottleBackRate = col_exists($pdo, 'stock_products', 'bottle_back_rate_pct');
+$hasPriceHistory = col_exists($pdo, 'stock_product_price_history', 'id')
+  && col_exists($pdo, 'stock_product_price_history', 'product_id')
+  && col_exists($pdo, 'stock_product_price_history', 'new_price_yen');
+$priceFeatureReady = $hasPurchasePrice && $hasSellingPrice && $hasPriceHistory;
 
 $msg = '';
 $err = '';
 
 /**
  * uploads
- * FS : /var/www/html/seika-app/public/uploads/products
- * URL: /seika-app/public/uploads/products/xxxx.png
+ * FS : /var/www/html/wbss/public/uploads/products
+ * URL: /wbss/public/uploads/products/xxxx.png
  */
 $PUBLIC_FS = realpath(__DIR__ . '/../..'); // => .../public
 if ($PUBLIC_FS === false) $PUBLIC_FS = __DIR__ . '/../..';
 $UPLOAD_DIR_FS  = rtrim($PUBLIC_FS, '/') . '/uploads/products';
-$UPLOAD_DIR_URL = '/seika-app/public/uploads/products';
+$UPLOAD_DIR_URL = '/wbss/public/uploads/products';
 
 /* ===== helpers ===== */
 function now_jst(): string {
@@ -67,6 +78,32 @@ function int_or_null($v): ?int {
   if ($s === '') return null;
   if (!preg_match('/^\d+$/', $s)) return null;
   return (int)$s;
+}
+function parse_price_or_null($v): ?int {
+  $s = trim((string)$v);
+  if ($s === '') return null;
+  $s = str_replace([',', '¥', '￥', ' '], '', $s);
+  if (!preg_match('/^\d+(?:\.\d+)?$/', $s)) {
+    throw new InvalidArgumentException('価格は0以上の数字で入力してください');
+  }
+  return (int)round((float)$s);
+}
+function parse_percent_or_null($v): ?string {
+  $s = trim((string)$v);
+  if ($s === '') return null;
+  $s = str_replace(['%', '％', ' '], '', $s);
+  if (!preg_match('/^\d+(?:\.\d{1,2})?$/', $s)) {
+    throw new InvalidArgumentException('バック率は0以上の数値で入力してください');
+  }
+  $value = (float)$s;
+  if ($value < 0 || $value > 100) {
+    throw new InvalidArgumentException('バック率は0〜100で入力してください');
+  }
+  return number_format($value, 2, '.', '');
+}
+function fmt_yen($v): string {
+  if ($v === null || $v === '') return '-';
+  return '¥' . number_format((int)$v);
 }
 
 /** カラム存在チェック（B案 store_id フィルタに使う） */
@@ -182,9 +219,29 @@ if ($id > 0) {
     'unit' => '本',
     'is_stock_managed' => 1,
     'reorder_point' => null,
+    'purchase_price_yen' => null,
+    'selling_price_yen' => null,
+    'bottle_back_rate_pct' => null,
     'is_active' => 1,
     'image_path' => null,
   ];
+}
+
+$priceHistory = [];
+if ((int)$p['id'] > 0 && $hasPriceHistory) {
+  $st = $pdo->prepare("
+    SELECT
+      h.price_type, h.old_price_yen, h.new_price_yen, h.note, h.changed_at,
+      u.display_name
+    FROM stock_product_price_history h
+    LEFT JOIN users u ON u.id = h.changed_by
+    WHERE h.store_id = ?
+      AND h.product_id = ?
+    ORDER BY h.changed_at DESC, h.id DESC
+    LIMIT 12
+  ");
+  $st->execute([$store_id, (int)$p['id']]);
+  $priceHistory = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
 
 /* ===== POST ===== */
@@ -208,6 +265,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reorder_point = int_or_null($_POST['reorder_point'] ?? ($cur['reorder_point'] ?? ''));
     $is_active = (int)($_POST['is_active'] ?? ($cur['is_active'] ?? 1));
     $is_active = ($is_active === 0) ? 0 : 1;
+    $purchase_price = ($canEditPrices && $hasPurchasePrice)
+      ? parse_price_or_null($_POST['purchase_price_yen'] ?? ($cur['purchase_price_yen'] ?? ''))
+      : (($cur['purchase_price_yen'] ?? null) === null ? null : (int)$cur['purchase_price_yen']);
+    $selling_price = ($canEditPrices && $hasSellingPrice)
+      ? parse_price_or_null($_POST['selling_price_yen'] ?? ($cur['selling_price_yen'] ?? ''))
+      : (($cur['selling_price_yen'] ?? null) === null ? null : (int)$cur['selling_price_yen']);
+    $bottle_back_rate = ($canEditPrices && $hasBottleBackRate)
+      ? parse_percent_or_null($_POST['bottle_back_rate_pct'] ?? ($cur['bottle_back_rate_pct'] ?? ''))
+      : (($cur['bottle_back_rate_pct'] ?? null) === null ? null : number_format((float)$cur['bottle_back_rate_pct'], 2, '.', ''));
+    $price_note = trim((string)($_POST['price_note'] ?? ''));
+    if (mb_strlen($price_note) > 255) $price_note = mb_substr($price_note, 0, 255);
 
     if ($name === '') {
       $err = '商品名は必須です';
@@ -222,9 +290,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           if ($prodHasStore) {
             $st = $pdo->prepare("
               INSERT INTO stock_products
-                (store_id, category_id, product_type, name, is_stock_managed, reorder_point, barcode, unit, is_active, created_at, updated_at)
+                (store_id, category_id, product_type, name, is_stock_managed, reorder_point, barcode, unit, purchase_price_yen, selling_price_yen, bottle_back_rate_pct, is_active, created_at, updated_at)
               VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $st->execute([
               $store_id,
@@ -235,6 +303,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $reorder_point,
               ($barcode === '' ? null : $barcode),
               $unit,
+              $hasPurchasePrice ? $purchase_price : null,
+              $hasSellingPrice ? $selling_price : null,
+              $hasBottleBackRate ? $bottle_back_rate : null,
               $is_active,
               $now,
               $now,
@@ -242,9 +313,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           } else {
             $st = $pdo->prepare("
               INSERT INTO stock_products
-                (category_id, product_type, name, is_stock_managed, reorder_point, barcode, unit, is_active, created_at, updated_at)
+                (category_id, product_type, name, is_stock_managed, reorder_point, barcode, unit, purchase_price_yen, selling_price_yen, bottle_back_rate_pct, is_active, created_at, updated_at)
               VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $st->execute([
               $category_id,
@@ -254,6 +325,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $reorder_point,
               ($barcode === '' ? null : $barcode),
               $unit,
+              $hasPurchasePrice ? $purchase_price : null,
+              $hasSellingPrice ? $selling_price : null,
+              $hasBottleBackRate ? $bottle_back_rate : null,
               $is_active,
               $now,
               $now,
@@ -264,7 +338,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           if ($prodHasStore) {
             $st = $pdo->prepare("
               UPDATE stock_products
-              SET category_id=?, product_type=?, name=?, is_stock_managed=?, reorder_point=?, barcode=?, unit=?, is_active=?, updated_at=?
+              SET category_id=?, product_type=?, name=?, is_stock_managed=?, reorder_point=?, barcode=?, unit=?, purchase_price_yen=?, selling_price_yen=?, bottle_back_rate_pct=?, is_active=?, updated_at=?
               WHERE id=? AND store_id=?
               LIMIT 1
             ");
@@ -276,6 +350,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $reorder_point,
               ($barcode === '' ? null : $barcode),
               $unit,
+              $hasPurchasePrice ? $purchase_price : ($cur['purchase_price_yen'] ?? null),
+              $hasSellingPrice ? $selling_price : ($cur['selling_price_yen'] ?? null),
+              $hasBottleBackRate ? $bottle_back_rate : ($cur['bottle_back_rate_pct'] ?? null),
               $is_active,
               $now,
               $pid,
@@ -284,7 +361,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           } else {
             $st = $pdo->prepare("
               UPDATE stock_products
-              SET category_id=?, product_type=?, name=?, is_stock_managed=?, reorder_point=?, barcode=?, unit=?, is_active=?, updated_at=?
+              SET category_id=?, product_type=?, name=?, is_stock_managed=?, reorder_point=?, barcode=?, unit=?, purchase_price_yen=?, selling_price_yen=?, bottle_back_rate_pct=?, is_active=?, updated_at=?
               WHERE id=?
               LIMIT 1
             ");
@@ -296,9 +373,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $reorder_point,
               ($barcode === '' ? null : $barcode),
               $unit,
+              $hasPurchasePrice ? $purchase_price : ($cur['purchase_price_yen'] ?? null),
+              $hasSellingPrice ? $selling_price : ($cur['selling_price_yen'] ?? null),
+              $hasBottleBackRate ? $bottle_back_rate : ($cur['bottle_back_rate_pct'] ?? null),
               $is_active,
               $now,
               $pid,
+            ]);
+          }
+        }
+
+        if ($canEditPrices && $priceFeatureReady) {
+          $oldPurchase = ($cur['purchase_price_yen'] ?? null) === null ? null : (int)$cur['purchase_price_yen'];
+          $oldSelling = ($cur['selling_price_yen'] ?? null) === null ? null : (int)$cur['selling_price_yen'];
+          $historyStmt = $pdo->prepare("
+            INSERT INTO stock_product_price_history
+              (store_id, product_id, price_type, old_price_yen, new_price_yen, note, changed_by, changed_at)
+            VALUES
+              (?, ?, ?, ?, ?, ?, ?, ?)
+          ");
+          if ($oldPurchase !== $purchase_price) {
+            $historyStmt->execute([
+              $store_id,
+              $pid,
+              'purchase',
+              $oldPurchase,
+              $purchase_price,
+              ($price_note !== '' ? $price_note : null),
+              current_user_id(),
+              $now,
+            ]);
+          }
+          if ($oldSelling !== $selling_price) {
+            $historyStmt->execute([
+              $store_id,
+              $pid,
+              'selling',
+              $oldSelling,
+              $selling_price,
+              ($price_note !== '' ? $price_note : null),
+              current_user_id(),
+              $now,
             ]);
           }
         }
@@ -318,7 +433,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $pdo->commit();
-        header('Location: /seika-app/public/stock/products/edit.php?id=' . $pid . '&ok=1');
+        header('Location: /wbss/public/stock/products/edit.php?id=' . $pid . '&ok=1');
         exit;
       } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -339,7 +454,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $pdo->prepare("UPDATE stock_products SET image_path=NULL, updated_at=? WHERE id=? LIMIT 1")
               ->execute([now_jst(), $pid]);
         }
-        header('Location: /seika-app/public/stock/products/edit.php?id=' . $pid . '&ok=1');
+        header('Location: /wbss/public/stock/products/edit.php?id=' . $pid . '&ok=1');
         exit;
       } catch (Throwable $e) {
         $err = $e->getMessage();
@@ -350,11 +465,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if ((int)($_GET['ok'] ?? 0) === 1 && $msg === '' && $err === '') $msg = '保存しました';
 
-$right = '<a class="btn" href="/seika-app/public/stock/index.php">在庫ランチャー</a>';
+$right = '<a class="btn" href="/wbss/public/stock/index.php">在庫ランチャー</a>';
 
 render_page_start('商品編集');
 render_header('商品編集', [
-  'back_href'  => '/seika-app/public/stock/products/index.php',
+  'back_href'  => '/wbss/public/stock/products/index.php',
   'back_label' => '← 商品一覧',
   'right_html' => $right,
 ]);
@@ -440,6 +555,118 @@ render_header('商品編集', [
           </select>
         </div>
 
+        <?php
+          $purchase = ($p['purchase_price_yen'] ?? null) === null ? null : (int)$p['purchase_price_yen'];
+          $selling = ($p['selling_price_yen'] ?? null) === null ? null : (int)$p['selling_price_yen'];
+          $bottleBackRate = ($p['bottle_back_rate_pct'] ?? null) === null ? null : (float)$p['bottle_back_rate_pct'];
+          $unitGross = ($purchase !== null && $selling !== null) ? ($selling - $purchase) : null;
+          $grossRate = ($unitGross !== null && $selling > 0) ? (($unitGross / $selling) * 100) : null;
+          $expectedBack = ($selling !== null && $bottleBackRate !== null) ? (int)round($selling * ($bottleBackRate / 100)) : null;
+        ?>
+        <div style="grid-column:1/-1; margin-top:4px; padding:12px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.03);">
+          <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:1000; font-size:15px;">価格と粗利</div>
+              <div class="muted">商品マスタから価格も管理できます。価格変更はadmin以上のみです。</div>
+            </div>
+            <div class="muted">
+              <?php if ($priceFeatureReady): ?>
+                <?= $canEditPrices ? '更新可能' : '閲覧のみ' ?>
+              <?php else: ?>
+                DB設定待ち
+              <?php endif; ?>
+            </div>
+          </div>
+
+          <?php if (!$priceFeatureReady): ?>
+            <div class="muted" style="margin-top:10px;">
+              価格機能のDB設定が未完了です。<code>docs/add_stock_price_tracking.sql</code> を確認してください。
+            </div>
+          <?php endif; ?>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px;">
+            <div>
+              <label class="muted">仕入れ価格</label><br>
+              <?php if ($canEditPrices && $hasPurchasePrice): ?>
+                <input class="btn" style="width:100%;" name="purchase_price_yen" inputmode="numeric" value="<?= h((string)($p['purchase_price_yen'] ?? '')) ?>" placeholder="例) 1800">
+              <?php else: ?>
+                <div class="btn" style="width:100%; display:flex; align-items:center; min-height:44px;"><?= h(fmt_yen($p['purchase_price_yen'] ?? null)) ?></div>
+              <?php endif; ?>
+            </div>
+
+            <div>
+              <label class="muted">販売価格</label><br>
+              <?php if ($canEditPrices && $hasSellingPrice): ?>
+                <input class="btn" style="width:100%;" name="selling_price_yen" inputmode="numeric" value="<?= h((string)($p['selling_price_yen'] ?? '')) ?>" placeholder="例) 3000">
+              <?php else: ?>
+                <div class="btn" style="width:100%; display:flex; align-items:center; min-height:44px;"><?= h(fmt_yen($p['selling_price_yen'] ?? null)) ?></div>
+              <?php endif; ?>
+            </div>
+
+            <div>
+              <label class="muted">ボトルバック率</label><br>
+              <?php if ($canEditPrices && $hasBottleBackRate): ?>
+                <input class="btn" style="width:100%;" name="bottle_back_rate_pct" inputmode="decimal" value="<?= h((string)($p['bottle_back_rate_pct'] ?? '')) ?>" placeholder="例) 10">
+              <?php else: ?>
+                <div class="btn" style="width:100%; display:flex; align-items:center; min-height:44px;"><?= h($bottleBackRate === null ? '-' : number_format($bottleBackRate, 2) . '%') ?></div>
+              <?php endif; ?>
+            </div>
+
+            <div>
+              <label class="muted">粗利/1<?= h((string)($p['unit'] ?? '個')) ?></label><br>
+              <div class="btn" style="width:100%; display:flex; align-items:center; min-height:44px; color:<?= ($unitGross !== null && $unitGross < 0) ? '#fda4af' : '#86efac' ?>;">
+                <?= h($unitGross === null ? '-' : (($unitGross > 0 ? '+' : '') . fmt_yen($unitGross))) ?>
+              </div>
+            </div>
+
+            <div>
+              <label class="muted">粗利率</label><br>
+              <div class="btn" style="width:100%; display:flex; align-items:center; min-height:44px;">
+                <?= h($grossRate === null ? '-' : number_format($grossRate, 1) . '%') ?>
+              </div>
+            </div>
+
+            <div>
+              <label class="muted">想定バック/1<?= h((string)($p['unit'] ?? '個')) ?></label><br>
+              <div class="btn" style="width:100%; display:flex; align-items:center; min-height:44px;">
+                <?= h($expectedBack === null ? '-' : fmt_yen($expectedBack)) ?>
+              </div>
+            </div>
+
+            <?php if ($canEditPrices && $priceFeatureReady): ?>
+              <div style="grid-column:1/-1;">
+                <label class="muted">価格変更メモ（任意）</label><br>
+                <input class="btn" style="width:100%;" name="price_note" value="" placeholder="例) 仕入先変更 / 値上げ対応">
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <?php if ((int)$p['id'] > 0): ?>
+            <div style="margin-top:12px;">
+              <div class="muted" style="margin-bottom:6px;">価格変更履歴</div>
+              <?php if ($priceHistory): ?>
+                <div style="display:grid; gap:8px;">
+                  <?php foreach ($priceHistory as $history): ?>
+                    <div style="padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04);">
+                      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <strong><?= h(((string)$history['price_type'] === 'purchase') ? '仕入れ' : '販売') ?></strong>
+                        <span class="muted"><?= h((string)$history['changed_at']) ?></span>
+                        <span class="muted"><?= h((string)($history['display_name'] ?? '')) ?></span>
+                      </div>
+                      <div style="margin-top:4px;"><?= h(fmt_yen($history['old_price_yen'] ?? null)) ?> → <?= h(fmt_yen($history['new_price_yen'] ?? null)) ?></div>
+                      <?php if ((string)($history['note'] ?? '') !== ''): ?>
+                        <div class="muted" style="margin-top:4px;"><?= h((string)$history['note']) ?></div>
+                      <?php endif; ?>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              <?php else: ?>
+                <div class="muted">まだ価格変更履歴はありません。</div>
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
+        </div>
+
         <div style="grid-column:1/-1;">
           <label class="muted">商品画像（任意 / 5MBまで）</label><br>
           <input class="btn" style="width:100%;" type="file" name="image" accept="image/*">
@@ -459,7 +686,7 @@ render_header('商品編集', [
 
       <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn btn-primary" type="submit">保存</button>
-        <a class="btn" href="/seika-app/public/stock/products/index.php">一覧へ戻る</a>
+        <a class="btn" href="/wbss/public/stock/products/index.php">一覧へ戻る</a>
       </div>
     </form>
   </div>

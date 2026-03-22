@@ -5,6 +5,14 @@ require_once __DIR__ . '/../app/auth.php';
 require_once __DIR__ . '/../app/db.php';
 require_once __DIR__ . '/../app/layout.php';
 
+/**
+ * Legacy cast schedule screen.
+ *
+ * Canonical rules:
+ * - plan source of truth: cast_shift_plans
+ * - actual source of truth: attendances
+ */
+
 require_login();
 
 $pdo = db();
@@ -47,14 +55,16 @@ for ($i=0; $i<7; $i++) {
 }
 $weekStartStr = $weekStart->format('Y-m-d');
 $weekEndStr   = (clone $weekStart)->modify('+6 days')->format('Y-m-d');
+$ok = (string)($_GET['ok'] ?? '') === '1';
 
-/** 予定取得（attendances.status='scheduled' を予定として扱う） */
+/** 予定取得（canonical: cast_shift_plans） */
 $st = $pdo->prepare("
-  SELECT business_date, status, note
-  FROM attendances
+  SELECT business_date, is_off, note
+  FROM cast_shift_plans
   WHERE user_id=?
     AND store_id=?
     AND business_date BETWEEN ? AND ?
+    AND status='planned'
 ");
 $st->execute([$userId, $storeId, $weekStartStr, $weekEndStr]);
 
@@ -65,7 +75,7 @@ foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
 
 render_page_start('出勤予定');
 render_header('出勤予定', [
-  'back_href' => '/seika-app/public/dashboard.php',
+  'back_href' => '/wbss/public/dashboard.php',
   'back_label'=> '← 戻る',
 ]);
 ?>
@@ -76,7 +86,7 @@ render_header('出勤予定', [
       <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
         <div>
           <div style="font-weight:1000; font-size:18px;">🗓 出勤予定（<?=h($weekStartStr)?>〜<?=h($weekEndStr)?>）</div>
-          <div class="muted" style="margin-top:4px;">予定ONにすると「店長側の本日の出勤予定」に出せます</div>
+          <div class="muted" style="margin-top:4px;">保存先は <b>cast_shift_plans</b> です。実績は <b>attendances</b> で別管理します。</div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <a class="btn" href="?week=<?=h((clone $weekStart)->modify('-7 days')->format('Y-m-d'))?>">← 前週</a>
@@ -84,10 +94,14 @@ render_header('出勤予定', [
           <a class="btn" href="?week=<?=h((clone $weekStart)->modify('+7 days')->format('Y-m-d'))?>">次週 →</a>
         </div>
       </div>
+
+      <?php if ($ok): ?>
+        <div class="muted" style="margin-top:8px; color:#16a34a;">保存しました</div>
+      <?php endif; ?>
     </div>
 
     <div class="card" style="margin-top:14px;">
-      <form id="frm" method="post" action="/seika-app/public/api/cast_schedule_save.php">
+      <form id="frm" method="post" action="/wbss/public/cast_schedule_save.php">
         <input type="hidden" name="week_start" value="<?=h($weekStartStr)?>">
         <input type="hidden" name="store_id" value="<?=$storeId?>">
 

@@ -238,13 +238,13 @@ $move_items = [
    画面
 ========================= */
 $right = '
-  <a class="btn" href="/seika-app/public/stock/index.php">在庫ランチャー</a>
-  <a class="btn" href="/seika-app/public/stock/moves/history.php">作業履歴</a>
+  <a class="btn" href="/wbss/public/stock/index.php">在庫ランチャー</a>
+  <a class="btn" href="/wbss/public/stock/moves/history.php">作業履歴</a>
 ';
 
 render_page_start('入出庫監査');
 render_header('入出庫監査（Audit）', [
-  'back_href' => '/seika-app/public/stock/index.php',
+  'back_href' => '/wbss/public/stock/index.php',
   'back_label' => '← 在庫',
   'right_html' => $right,
 ]);
@@ -342,7 +342,7 @@ render_header('入出庫監査（Audit）', [
           // CSVリンク（現在のGETを維持して download=1 を付ける）
           $qs = $_GET;
           $qs['download'] = '1';
-          $csv_href = '/seika-app/public/stock/moves/audit.php?' . http_build_query($qs);
+          $csv_href = '/wbss/public/stock/moves/audit.php?' . http_build_query($qs);
         ?>
         <a class="btn" href="<?= h($csv_href) ?>">CSV</a>
       </div>
@@ -449,7 +449,7 @@ render_header('入出庫監査（Audit）', [
           $mk = function(int $p) use ($base): string {
             $q = $base;
             $q['page'] = (string)$p;
-            return '/seika-app/public/stock/moves/audit.php?' . http_build_query($q);
+            return '/wbss/public/stock/moves/audit.php?' . http_build_query($q);
           };
         ?>
         <a class="btn" href="<?= h($mk(1)) ?>">≪</a>

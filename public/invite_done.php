@@ -16,7 +16,7 @@ if ($storeId > 0) {
 }
 
 render_page_start('登録完了');
-render_header('登録完了', ['back_href'=>'/seika-app/public/login.php', 'back_label'=>'← ログイン']);
+render_header('登録完了', ['back_href'=>'/wbss/public/login.php', 'back_label'=>'← ログイン']);
 ?>
 <div class="page">
   <div class="card" style="text-align:center; padding:22px;">
@@ -26,7 +26,7 @@ render_header('登録完了', ['back_href'=>'/seika-app/public/login.php', 'back
     </div>
 
     <div style="margin-top:14px;">
-      <a class="btn btn-primary" href="/seika-app/public/login.php">ログインへ</a>
+      <a class="btn btn-primary" href="/wbss/public/login.php">ログインへ</a>
     </div>
   </div>
 </div>

@@ -1,9 +1,9 @@
 /* Simple SW: htmlはネット優先、静的はキャッシュ優先 */
-const CACHE = "seika-app-v1";
+const CACHE = "wbss-v2";
 const STATIC = [
-  "/seika-app/public/dashboard.php",
-  "/seika-app/public/pwa_help.php",
-  "/seika-app/public/manifest.webmanifest"
+  "/wbss/public/dashboard.php",
+  "/wbss/public/pwa_help.php",
+  "/wbss/public/manifest.webmanifest"
   // 必要ならCSS/JS/アイコンも追加
 ];
 
@@ -58,5 +58,70 @@ self.addEventListener("fetch", (e) => {
       caches.open(CACHE).then(c => c.put(req, copy));
       return res;
     }))
+  );
+});
+
+self.addEventListener("push", (event) => {
+  let payload = {
+    title: "新しい通知",
+    body: "未読メッセージがあります",
+    url: "/wbss/public/dashboard.php",
+    badgeCount: 0
+  };
+
+  try {
+    const data = event.data ? event.data.json() : null;
+    if (data && typeof data === "object") {
+      payload = Object.assign(payload, data);
+    }
+  } catch (err) {}
+
+  event.waitUntil((async () => {
+    if ("setAppBadge" in self.navigator || "setAppBadge" in self.registration) {
+      try {
+        const count = Number(payload.badgeCount || 0);
+        if ("setAppBadge" in self.navigator) {
+          if (count > 0) await self.navigator.setAppBadge(count);
+          else if ("clearAppBadge" in self.navigator) await self.navigator.clearAppBadge();
+        } else if ("setAppBadge" in self.registration) {
+          if (count > 0) await self.registration.setAppBadge(count);
+          else if ("clearAppBadge" in self.registration) await self.registration.clearAppBadge();
+        }
+      } catch (err) {}
+    }
+
+    await self.registration.showNotification(payload.title, {
+      body: payload.body || "",
+      icon: "/wbss/public/assets/icon-192.png",
+      badge: "/wbss/public/assets/icon-192.png",
+      data: {
+        url: payload.url || "/wbss/public/dashboard.php"
+      },
+      tag: payload.kind || "message",
+      renotify: true
+    });
+  })());
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification && event.notification.data && event.notification.data.url)
+    ? event.notification.data.url
+    : "/wbss/public/dashboard.php";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ("focus" in client) {
+          if (client.url === new URL(targetUrl, self.location.origin).href) {
+            return client.focus();
+          }
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+      return null;
+    })
   );
 });

@@ -11,8 +11,28 @@ function conf(string $key): string {
   $v = getenv($key);
   return is_string($v) ? $v : '';
 }
+function current_origin(): string {
+  $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || ((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+  $scheme = $https ? 'https' : 'http';
+  $host = trim((string)($_SERVER['HTTP_HOST'] ?? ''));
+  return $host !== '' ? ($scheme . '://' . $host) : '';
+}
+function normalize_google_redirect_uri(string $uri): string {
+  $uri = trim($uri);
+  if ($uri !== '') {
+    $uri = preg_replace('#/seika-app/public/google_callback\.php$#', '/wbss/public/google_callback.php', $uri) ?? $uri;
+  }
+  if ($uri === '') {
+    $origin = current_origin();
+    if ($origin !== '') {
+      $uri = $origin . '/wbss/public/google_callback.php';
+    }
+  }
+  return $uri;
+}
 function redirect_login(string $qs = ''): void {
-  $url = '/seika-app/public/login.php' . ($qs ? ('?' . $qs) : '');
+  $url = '/wbss/public/login.php' . ($qs ? ('?' . $qs) : '');
   header('Location: ' . $url);
   exit;
 }
@@ -47,7 +67,7 @@ function clear_cookie(string $name): void {
   $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
   setcookie($name, '', [
     'expires'  => time() - 3600,
-    'path'     => '/seika-app/public',
+    'path'     => '/wbss/public',
     'secure'   => $secure,
     'httponly' => true,
     'samesite' => 'Lax',
@@ -56,7 +76,7 @@ function clear_cookie(string $name): void {
 
 $clientId     = conf('GOOGLE_CLIENT_ID');
 $clientSecret = conf('GOOGLE_CLIENT_SECRET');
-$redirectUri  = conf('GOOGLE_REDIRECT_URI');
+$redirectUri  = normalize_google_redirect_uri(conf('GOOGLE_REDIRECT_URI'));
 $secret       = conf('OAUTH_STATE_SECRET');
 
 if ($clientId === '' || $clientSecret === '' || $redirectUri === '' || $secret === '') {
@@ -87,7 +107,7 @@ if ($nonce === '' || $cookieNonce === '' || !hash_equals($cookieNonce, $nonce)) 
 
 $mode   = (string)($st['mode'] ?? 'login');  // login/link
 $target = (int)($st['target'] ?? 0);
-$ret    = (string)($st['ret'] ?? '/seika-app/public/gate.php');
+$ret    = (string)($st['ret'] ?? '/wbss/public/gate.php');
 
 $pdo = db();
 
@@ -218,7 +238,7 @@ try {
   // 6) ログイン確立（あなたの auth.php の定義に合わせて「void」想定）
   login_user_by_id($userId);
 
-  header('Location: /seika-app/public/gate.php');
+  header('Location: /wbss/public/gate.php');
   exit;
 
 } catch (Throwable $e) {

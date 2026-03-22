@@ -18,22 +18,55 @@ function conf(string $key): string {
   $v = getenv($key);
   return is_string($v) ? $v : '';
 }
+function current_origin(): string {
+  $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || ((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+  $scheme = $https ? 'https' : 'http';
+  $host = trim((string)($_SERVER['HTTP_HOST'] ?? ''));
+  return $host !== '' ? ($scheme . '://' . $host) : '';
+}
+function normalize_google_redirect_uri(string $uri): string {
+  $uri = trim($uri);
+  if ($uri !== '') {
+    $uri = preg_replace('#/seika-app/public/google_callback\.php$#', '/wbss/public/google_callback.php', $uri) ?? $uri;
+  }
+  if ($uri === '') {
+    $origin = current_origin();
+    if ($origin !== '') {
+      $uri = $origin . '/wbss/public/google_callback.php';
+    }
+  }
+  return $uri;
+}
+function normalize_line_redirect_uri(string $uri): string {
+  $uri = trim($uri);
+  if ($uri !== '') {
+    $uri = preg_replace('#/seika-app/public/line_callback\.php$#', '/wbss/public/line_callback.php', $uri) ?? $uri;
+  }
+  if ($uri === '') {
+    $origin = current_origin();
+    if ($origin !== '') {
+      $uri = $origin . '/wbss/public/line_callback.php';
+    }
+  }
+  return $uri;
+}
 
 /** LINE設定 */
 $LINE_CHANNEL_ID     = conf('LINE_CHANNEL_ID');
 $LINE_CHANNEL_SECRET = conf('LINE_CHANNEL_SECRET');
-$LINE_REDIRECT_URI   = conf('LINE_REDIRECT_URI');
+$LINE_REDIRECT_URI   = normalize_line_redirect_uri(conf('LINE_REDIRECT_URI'));
 $lineReady = ($LINE_CHANNEL_ID !== '' && $LINE_CHANNEL_SECRET !== '' && $LINE_REDIRECT_URI !== '');
 
 /** Google設定 */
 $GOOGLE_CLIENT_ID     = conf('GOOGLE_CLIENT_ID');
 $GOOGLE_CLIENT_SECRET = conf('GOOGLE_CLIENT_SECRET');
-$GOOGLE_REDIRECT_URI  = conf('GOOGLE_REDIRECT_URI');
+$GOOGLE_REDIRECT_URI  = normalize_google_redirect_uri(conf('GOOGLE_REDIRECT_URI'));
 $googleReady = ($GOOGLE_CLIENT_ID !== '' && $GOOGLE_CLIENT_SECRET !== '' && $GOOGLE_REDIRECT_URI !== '');
 
 /** すでにログイン済みならゲートへ（ループ防止） */
 if (!empty($_SESSION['user_id'])) {
-  header('Location: /seika-app/public/gate.php');
+  header('Location: /wbss/public/gate.php');
   exit;
 }
 
@@ -69,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   $res = login_user($login_id, $pw);
   if (!empty($res['ok'])) {
-    header('Location: /seika-app/public/gate.php');
+    header('Location: /wbss/public/gate.php');
     exit;
   }
   $msg = (string)($res['error'] ?? 'ログインに失敗しました');
@@ -81,14 +114,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Seika App ログイン</title>
+  <title>WBSS ログイン</title>
 
-  <link rel="manifest" href="/seika-app/public/manifest.webmanifest">
+  <link rel="manifest" href="/wbss/public/manifest.webmanifest">
   <meta name="theme-color" content="#0b1220">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Seika">
-  <link rel="apple-touch-icon" href="/seika-app/public/assets/icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="wbss">
+  <link rel="apple-touch-icon" href="/wbss/public/assets/icon-192.png">
 
   <script>
     (function(){
@@ -305,7 +338,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="logo">
         <div class="mark" aria-hidden="true"></div>
         <div>
-          <h1 class="ttl">Seika App ログイン</h1>
+          <h1 class="ttl">WBSS システム</h1>
           <div class="sub">現場の入力ミスを減らす。PWA推奨。</div>
         </div>
       </div>
@@ -326,14 +359,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <!-- ✅ LINEでログイン（リンクなので確実に押せる） -->
     <a class="btn lineBtn <?= $lineReady ? '' : 'disabled' ?>"
-       href="/seika-app/public/line_login_start.php">
+       href="/wbss/public/line_login_start.php">
       <span style="font-size:18px;">LINEでログイン</span>
       <span class="mini">（パスワード不要）</span>
     </a>
 
     <!-- ✅ Googleでログイン -->
     <a class="btn googleBtn <?= $googleReady ? '' : 'disabled' ?>"
-       href="/seika-app/public/google_login_start.php"
+       href="/wbss/public/google_login_start.php"
        aria-label="Googleでログイン">
       <span class="googleG">G</span>
       <span style="font-size:18px;">Googleでログイン</span>

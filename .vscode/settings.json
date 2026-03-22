@@ -1,0 +1,77 @@
+{
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "100.119.41.118",
+            "port": 3306,
+            "driver": "MariaDB",
+            "name": "raspi5",
+            "database": "haruto_core",
+            "username": "newname"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MariaDB",
+            "name": "raspi5",
+            "database": "haruto_core",
+            "username": "newname",
+            "askForPassword": true
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MariaDB",
+            "name": "haruto-core",
+            "database": "haruto-core",
+            "username": "nenwame"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MariaDB",
+            "name": "raspi5-mariadb",
+            "database": "haruto_core",
+            "username": "newname",
+            "password": "harutoga1ban"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "127.0.0.1",
+            "port": 3307,
+            "driver": "MariaDB",
+            "name": "raspi5-mariadb",
+            "database": "haruto_core",
+            "username": "newname",
+            "password": "harutoga1ban"
+        }
+    ]
+}

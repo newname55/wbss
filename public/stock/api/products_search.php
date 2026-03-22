@@ -13,6 +13,14 @@ if (!is_role('super_user') && !is_role('admin') && !is_role('manager')) {
   exit;
 }
 
+$store_id = current_store_id();
+if ($store_id === null) {
+  http_response_code(400);
+  echo json_encode(['ok' => false, 'error' => 'store not selected'], JSON_UNESCAPED_UNICODE);
+  exit;
+}
+$store_id = (int)$store_id;
+
 function out(array $a): void {
   echo json_encode($a, JSON_UNESCAPED_UNICODE);
   exit;
@@ -44,8 +52,8 @@ if ($ptype !== '' && !in_array($ptype, $allowed_ptype, true)) {
   out(['ok' => false, 'error' => 'Invalid ptype']);
 }
 
-$where = ['p.is_active = 1'];
-$params = [];
+$where = ['p.is_active = 1', 'p.store_id = ?'];
+$params = [$store_id];
 
 if ($q !== '') {
   // 文字 or JAN どっちも拾う

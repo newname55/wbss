@@ -12,7 +12,7 @@ function ensure_session(): void {
 function require_login(): void {
   ensure_session();
   if (!isset($_SESSION["user_id"])) {
-    header("Location: /seika-app/public/login.php");
+    header("Location: /wbss/public/login.php");
     exit;
   }
 }

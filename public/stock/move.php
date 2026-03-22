@@ -10,7 +10,7 @@ require_role(['super_user','admin','manager','staff']);
 
 $store_id = current_store_id();
 if ($store_id === null) {
-  header('Location: /seika-app/public/store_select.php');
+  header('Location: /wbss/public/store_select.php');
   exit;
 }
 $store_id = (int)$store_id;
@@ -22,10 +22,15 @@ $pdo = db();
 $msg = '';
 $err = '';
 
-$prefill_q = trim((string)($_GET['q'] ?? $_GET['barcode'] ?? ''));
+$prefill_q = trim((string)($_POST['barcode'] ?? $_GET['q'] ?? $_GET['barcode'] ?? ''));
+$prefill_prod_q = trim((string)($_POST['prod_q'] ?? $prefill_q));
 /** product_type フィルタ（任意） */
 $ptype = (string)($_GET['ptype'] ?? ''); // mixer/bottle/consumable
 $is_mixer_mode = ($ptype === 'mixer');
+$current_op_mode = (string)($_POST['op_mode'] ?? 'in');
+if (!in_array($current_op_mode, ['in', 'out', 'adjust'], true)) {
+  $current_op_mode = 'in';
+}
 
 /* ========= helpers ========= */
 function col_exists(PDO $pdo, string $table, string $col): bool {
@@ -39,6 +44,59 @@ function col_exists(PDO $pdo, string $table, string $col): bool {
   ");
   $st->execute([$table, $col]);
   return (bool)$st->fetchColumn();
+}
+function op_label(string $op): string {
+  return match ($op) {
+    'in'     => '入庫',
+    'out'    => '出庫',
+    'adjust' => '棚卸',
+    default  => $op,
+  };
+}
+
+function sync_stock_item_total(PDO $pdo, int $store_id, int $product_id): int {
+  $sumSt = $pdo->prepare("
+    SELECT COALESCE(SUM(qty), 0)
+    FROM stock_item_locations
+    WHERE store_id = ? AND product_id = ?
+  ");
+  $sumSt->execute([$store_id, $product_id]);
+  $total_qty = (int)$sumSt->fetchColumn();
+
+  $itemSt = $pdo->prepare("
+    SELECT id
+    FROM stock_items
+    WHERE store_id = ? AND product_id = ?
+    FOR UPDATE
+  ");
+  $itemSt->execute([$store_id, $product_id]);
+  $item_id = (int)$itemSt->fetchColumn();
+
+  if ($item_id > 0) {
+    $pdo->prepare("UPDATE stock_items SET qty = ? WHERE id = ?")->execute([$total_qty, $item_id]);
+  } else {
+    $pdo->prepare("INSERT INTO stock_items (store_id, product_id, qty) VALUES (?, ?, ?)")
+      ->execute([$store_id, $product_id, $total_qty]);
+  }
+
+  return $total_qty;
+}
+
+$location_id = (int)($_POST['location_id'] ?? $_GET['location_id'] ?? 0);
+$locSt = $pdo->prepare("
+  SELECT id, name
+  FROM stock_locations
+  WHERE store_id = ? AND is_active = 1
+  ORDER BY sort_order, id
+");
+$locSt->execute([$store_id]);
+$locations = $locSt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+$locationMap = [];
+foreach ($locations as $locationRow) {
+  $locationMap[(int)$locationRow['id']] = (string)$locationRow['name'];
+}
+if ($location_id <= 0 && $locations) {
+  $location_id = (int)$locations[0]['id'];
 }
 
 /* =========================
@@ -94,12 +152,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['mode'] ?? '') === 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['mode'] ?? '') === 'move') {
   $op_mode    = (string)($_POST['op_mode'] ?? 'in'); // in|out|adjust
   $product_id = (int)($_POST['product_id'] ?? 0);
+  $location_id = (int)($_POST['location_id'] ?? $location_id);
   $qty_input  = trim((string)($_POST['qty'] ?? ''));
   $note       = trim((string)($_POST['note'] ?? ''));
   $barcode    = trim((string)($_POST['barcode'] ?? ''));
 
   if (!in_array($op_mode, ['in','out','adjust'], true)) {
     $err = '操作種別が不正です';
+  } elseif ($location_id <= 0 || !isset($locationMap[$location_id])) {
+    $err = '場所を選択してください';
   } else {
     if ($product_id <= 0 && $barcode !== '') {
       $st = $pdo->prepare("SELECT id FROM stock_products WHERE barcode = ? AND is_active=1 LIMIT 1");
@@ -123,17 +184,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['mode'] ?? '') === 
 
           $st = $pdo->prepare("
             SELECT id, qty
-            FROM stock_items
-            WHERE store_id = ? AND product_id = ?
+            FROM stock_item_locations
+            WHERE store_id = ? AND product_id = ? AND location_id = ?
             FOR UPDATE
           ");
-          $st->execute([$store_id, $product_id]);
+          $st->execute([$store_id, $product_id, $location_id]);
           $item = $st->fetch();
 
           if (!$item) {
-            $pdo->prepare("INSERT INTO stock_items (store_id, product_id, qty) VALUES (?, ?, 0)")
-              ->execute([$store_id, $product_id]);
-            $st->execute([$store_id, $product_id]);
+            $pdo->prepare("
+              INSERT INTO stock_item_locations (store_id, product_id, location_id, qty)
+              VALUES (?, ?, ?, 0)
+            ")->execute([$store_id, $product_id, $location_id]);
+            $st->execute([$store_id, $product_id, $location_id]);
             $item = $st->fetch();
           }
 
@@ -152,9 +215,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['mode'] ?? '') === 
           $new_qty = $cur_qty + $delta;
           if ($new_qty < 0) throw new RuntimeException('在庫がマイナスになります');
 
-          $pdo->prepare("UPDATE stock_items SET qty = ? WHERE id = ?")->execute([$new_qty, $item_id]);
+          $pdo->prepare("UPDATE stock_item_locations SET qty = ? WHERE id = ?")->execute([$new_qty, $item_id]);
 
           $created_by = (int)($_SESSION['user_id'] ?? 0);
+          $location_note = '@loc#' . $location_id . ($locationMap[$location_id] !== '' ? ' ' . $locationMap[$location_id] : '');
           $pdo->prepare("
             INSERT INTO stock_moves (store_id, product_id, move_type, delta, note, created_by)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -163,12 +227,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['mode'] ?? '') === 
             $product_id,
             $op_mode,
             $delta,
-            ($note === '' ? null : $note),
+            ($note === '' ? $location_note : ($note . ' / ' . $location_note)),
             ($created_by > 0 ? $created_by : null),
           ]);
 
+          $store_total_qty = sync_stock_item_total($pdo, $store_id, $product_id);
+
           $pdo->commit();
-          $msg = "OK: {$op_mode} / 変動 {$delta} → 在庫 {$new_qty}";
+          $msg = "OK: " . op_label($op_mode) . " / 場所 {$locationMap[$location_id]} / 変動 {$delta} → 場所在庫 {$new_qty} / 店合計 {$store_total_qty}";
         } catch (Throwable $e) {
           if ($pdo->inTransaction()) $pdo->rollBack();
           $err = $e->getMessage();
@@ -195,9 +261,8 @@ $rows = $hist->fetchAll();
 
 render_page_start('入出庫・棚卸');
 render_header('入出庫・棚卸', [
-  'back_href' => '/seika-app/public/stock/index.php',
+  'back_href' => '/wbss/public/stock/index.php',
   'back_label' => '← 在庫',
-  'right_html' => $right,
 ]);
 ?>
 <div class="page">
@@ -214,10 +279,10 @@ render_header('入出庫・棚卸', [
 
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <?php if (!$is_mixer_mode): ?>
-          <a class="btn" href="/seika-app/public/stock/move.php?ptype=mixer">割物モード</a>
+          <a class="btn" href="/wbss/public/stock/move.php?ptype=mixer">割物モード</a>
         <?php else: ?>
-          <a class="btn btn-primary" href="/seika-app/public/stock/move.php?ptype=mixer">割物モード中</a>
-          <a class="btn" href="/seika-app/public/stock/move.php">通常</a>
+          <a class="btn btn-primary" href="/wbss/public/stock/move.php?ptype=mixer">割物モード中</a>
+          <a class="btn" href="/wbss/public/stock/move.php">通常</a>
         <?php endif; ?>
       </div>
     </div>
@@ -226,35 +291,93 @@ render_header('入出庫・棚卸', [
 
     <form method="post" id="moveForm" autocomplete="off">
       <input type="hidden" name="mode" value="move">
+      <input type="hidden" name="op_mode" id="op_mode" value="<?= h($current_op_mode) ?>">
+
+      <div class="move-steps" aria-label="操作手順">
+        <div class="move-step">
+          <span class="move-step__num">1</span>
+          <span class="move-step__text">やることを選ぶ</span>
+        </div>
+        <div class="move-step">
+          <span class="move-step__num">2</span>
+          <span class="move-step__text">商品をえらぶ</span>
+        </div>
+        <div class="move-step">
+          <span class="move-step__num">3</span>
+          <span class="move-step__text">数を入れて反映</span>
+        </div>
+      </div>
+
+      <div class="action-picker" role="group" aria-label="操作を選ぶ">
+        <button type="button" class="action-chip<?= $current_op_mode === 'in' ? ' is-active' : '' ?>" data-op-mode="in">
+          <span class="action-chip__icon">📥</span>
+          <span class="action-chip__body">
+            <span class="action-chip__title">入庫</span>
+            <span class="action-chip__desc">入ってきた分を増やす</span>
+          </span>
+        </button>
+        <button type="button" class="action-chip<?= $current_op_mode === 'out' ? ' is-active' : '' ?>" data-op-mode="out">
+          <span class="action-chip__icon">📤</span>
+          <span class="action-chip__body">
+            <span class="action-chip__title">出庫</span>
+            <span class="action-chip__desc">使った分を減らす</span>
+          </span>
+        </button>
+        <button type="button" class="action-chip<?= $current_op_mode === 'adjust' ? ' is-active' : '' ?>" data-op-mode="adjust">
+          <span class="action-chip__icon">🧮</span>
+          <span class="action-chip__body">
+            <span class="action-chip__title">棚卸</span>
+            <span class="action-chip__desc">数えた結果に合わせる</span>
+          </span>
+        </button>
+      </div>
+
+      <div class="action-summary" id="actionSummary" aria-live="polite">
+        <div class="action-summary__label">いまの操作</div>
+        <div class="action-summary__title" id="actionSummaryTitle"><?= h(op_label($current_op_mode)) ?></div>
+        <div class="action-summary__text" id="actionSummaryText">
+          <?= h($current_op_mode === 'out'
+            ? '使った分を減らします。例: 提供した。'
+            : ($current_op_mode === 'adjust'
+              ? '今ある本当の数をそのまま入れます。差は自動計算です。'
+              : '新しく入った分を増やします。例: 納品された。')) ?>
+        </div>
+      </div>
 
       <div class="row" style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
-        <div>
-          <label class="muted">操作</label><br>
-          <select class="btn" name="op_mode" id="op_mode" style="min-width:220px;">
-            <option value="in">入庫（＋）</option>
-            <option value="out">出庫（－）</option>
-            <option value="adjust">棚卸（実数）</option>
-          </select>
-        </div>
-
         <div style="min-width:260px;">
-          <label class="muted">バーコード</label><br>
+          <label class="muted">バーコードを読む</label><br>
           <input class="btn" style="width:100%;" name="barcode" id="barcode"
        placeholder="JAN等（スキャンで自動入力）"
        value="<?= h($prefill_q) ?>">
         </div>
 
         <div style="min-width:260px;">
-          <label class="muted">商品検索（AJAX）</label><br>
-          <input class="btn" style="width:100%;" id="prod_q"
+          <label class="muted">商品名でさがす</label><br>
+          <input class="btn" style="width:100%;" id="prod_q" name="prod_q"
        placeholder="<?= $is_mixer_mode ? '割物のみ検索' : '商品名 / JAN' ?>"
-       value="<?= h($prefill_q) ?>">
+       value="<?= h($prefill_prod_q) ?>">
         </div>
 
         <div style="min-width:300px;">
-          <label class="muted">商品候補（タップで選択 / ℹ️で詳細）</label>
+          <label class="muted">商品候補（タップでえらぶ / ℹ️で詳細）</label>
           <div id="productList"></div>
           <input type="hidden" name="product_id" id="product_id">
+          <div class="picked-product" id="pickedProduct" hidden>
+            <div class="picked-product__label">選択中の商品</div>
+            <div class="picked-product__name" id="pickedProductName">-</div>
+          </div>
+        </div>
+
+        <div style="min-width:220px;">
+          <label class="muted">場所</label><br>
+          <select class="btn" name="location_id" id="location_id" style="width:100%;">
+            <?php foreach ($locations as $locationRow): ?>
+              <option value="<?= (int)$locationRow['id'] ?>" <?= ((int)$locationRow['id'] === $location_id) ? 'selected' : '' ?>>
+                <?= h((string)$locationRow['name']) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
         </div>
 
         <div>
@@ -263,25 +386,25 @@ render_header('入出庫・棚卸', [
         </div>
 
         <div style="min-width:170px;">
-          <label class="muted">数量</label><br>
-          <input class="btn" style="width:100%;" name="qty" id="qty" inputmode="numeric" placeholder="例) 1">
+          <label class="muted" id="qtyLabel"><?= h($current_op_mode === 'out' ? '出す数' : ($current_op_mode === 'adjust' ? '数えた数' : '入れる数')) ?></label><br>
+          <input class="btn" style="width:100%;" name="qty" id="qty" inputmode="numeric" placeholder="<?= h($current_op_mode === 'adjust' ? '例) 12' : '例) 1') ?>" value="<?= h((string)($_POST['qty'] ?? '')) ?>">
         </div>
 
         <div style="flex:1; min-width:260px;">
-          <label class="muted">メモ（任意）</label><br>
-          <input class="btn" style="width:100%;" name="note" id="note" placeholder="例) 納品/提供/破損/棚卸">
+          <label class="muted">メモ（なくてもOK）</label><br>
+          <input class="btn" style="width:100%;" name="note" id="note" placeholder="<?= h($current_op_mode === 'out' ? '例) 提供 / 廃棄 / 破損' : ($current_op_mode === 'adjust' ? '例) 月末棚卸' : '例) 納品 / 補充')) ?>" value="<?= h((string)($_POST['note'] ?? '')) ?>">
         </div>
 
         <div>
           <label class="muted">⏎</label><br>
-          <button class="btn" type="submit" id="submitBtn">反映</button>
+          <button class="btn btn-primary" type="submit" id="submitBtn"><?= h($current_op_mode === 'out' ? '出庫する' : ($current_op_mode === 'adjust' ? '棚卸を反映' : '入庫する')) ?></button>
         </div>
       </div>
 
       <div class="muted" style="margin-top:10px;">
         <?= $is_mixer_mode
-          ? '割物モード：検索/候補を割物に寄せる。スキャン後は数量へ自動フォーカス。'
-          : '通常：スキャン/検索どちらでもOK。棚卸は「実数」を入れるだけ（差分は自動計算）。'
+          ? '割物モード：検索/候補を割物に寄せる。場所を選んでから数量を入れる。'
+          : '通常：スキャン/検索どちらでもOK。場所を選んで入出庫し、店合計は自動同期。'
         ?>
       </div>
     </form>
@@ -290,7 +413,7 @@ render_header('入出庫・棚卸', [
   <div class="card" style="margin-top:14px;">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
       <div style="font-weight:1000;">直近履歴（30件）</div>
-      <a class="btn" href="/seika-app/public/stock/list.php">在庫一覧へ</a>
+      <a class="btn" href="/wbss/public/stock/list.php">在庫一覧へ</a>
     </div>
 
     <div style="overflow:auto; margin-top:10px;">
@@ -317,7 +440,7 @@ render_header('入出庫・棚卸', [
               <td style="padding:8px; border-bottom:1px solid var(--line);">
                 <span style="display:inline-block; padding:3px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.06); color:var(--muted);">
                   <span style="display:inline-block; width:8px; height:8px; border-radius:999px; background:<?= h($accent) ?>; margin-right:6px;"></span>
-                  <?= h($t) ?>
+                  <?= h(op_label($t)) ?>
                 </span>
               </td>
               <td style="padding:8px; border-bottom:1px solid var(--line); text-align:right;"><?= (int)$r['delta'] ?></td>
@@ -361,6 +484,142 @@ render_header('入出庫・棚卸', [
 </div>
 
 <style>
+  .move-steps{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .move-step{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+  }
+  .move-step__num{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:28px;
+    height:28px;
+    border-radius:999px;
+    background:linear-gradient(135deg, #facc15, #fb923c);
+    color:#0f172a;
+    font-weight:900;
+    font-size:13px;
+    flex:0 0 auto;
+  }
+  .move-step__text{
+    font-size:13px;
+    font-weight:900;
+  }
+
+  .action-picker{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .action-chip{
+    appearance:none;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    width:100%;
+    padding:14px;
+    text-align:left;
+    border-radius:16px;
+    border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    color:inherit;
+    cursor:pointer;
+    transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+  .action-chip:hover{
+    transform:translateY(-2px);
+    box-shadow:0 12px 24px rgba(0,0,0,.12);
+  }
+  .action-chip.is-active{
+    border-color:rgba(250,204,21,.45);
+    background:linear-gradient(180deg, rgba(250,204,21,.16), rgba(255,255,255,.03));
+    box-shadow:0 14px 28px rgba(0,0,0,.14);
+  }
+  .action-chip__icon{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:46px;
+    height:46px;
+    border-radius:14px;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.06);
+    font-size:22px;
+    flex:0 0 auto;
+  }
+  .action-chip__body{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    min-width:0;
+  }
+  .action-chip__title{
+    font-size:16px;
+    font-weight:1000;
+    line-height:1.2;
+  }
+  .action-chip__desc{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.45;
+  }
+
+  .action-summary{
+    margin-bottom:12px;
+    padding:12px 14px;
+    border:1px solid rgba(250,204,21,.30);
+    border-radius:16px;
+    background:linear-gradient(180deg, rgba(250,204,21,.12), rgba(255,255,255,.02));
+  }
+  .action-summary__label{
+    font-size:11px;
+    font-weight:900;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+  .action-summary__title{
+    font-size:18px;
+    font-weight:1000;
+    line-height:1.2;
+  }
+  .action-summary__text{
+    margin-top:4px;
+    font-size:12px;
+    line-height:1.6;
+    color:var(--muted);
+  }
+
+  .picked-product{
+    margin-top:8px;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+  }
+  .picked-product__label{
+    font-size:11px;
+    font-weight:900;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+  .picked-product__name{
+    font-size:14px;
+    font-weight:1000;
+    line-height:1.4;
+  }
+
   /* scan */
   #scanModal{ position:fixed; inset:0; z-index:9999; }
   .scan-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.65); }
@@ -394,6 +653,13 @@ render_header('入出庫・棚卸', [
     font-size:20px;
     font-weight:900;
     cursor:pointer;
+  }
+
+  @media (max-width: 820px){
+    .move-steps,
+    .action-picker{
+      grid-template-columns:1fr;
+    }
   }
 </style>
 
@@ -433,6 +699,14 @@ const Sound = (() => {
   const q = document.getElementById('prod_q');
   const qty = document.getElementById('qty');
   const barcodeInput = document.getElementById('barcode');
+  const opModeInput = document.getElementById('op_mode');
+  const actionSummaryTitle = document.getElementById('actionSummaryTitle');
+  const actionSummaryText = document.getElementById('actionSummaryText');
+  const qtyLabel = document.getElementById('qtyLabel');
+  const noteInput = document.getElementById('note');
+  const submitBtn = document.getElementById('submitBtn');
+  const pickedProduct = document.getElementById('pickedProduct');
+  const pickedProductName = document.getElementById('pickedProductName');
 
   const list = document.getElementById('productList');
   const pid  = document.getElementById('product_id');
@@ -446,6 +720,54 @@ const Sound = (() => {
 
   let timer = null;
 
+  function applyOpMode(mode){
+    const meta = {
+      in: {
+        title: '入庫',
+        help: '新しく入った分を増やします。例: 納品された。',
+        qtyLabel: '入れる数',
+        qtyPlaceholder: '例) 1',
+        notePlaceholder: '例) 納品 / 補充',
+        submitLabel: '入庫する',
+      },
+      out: {
+        title: '出庫',
+        help: '使った分を減らします。例: 提供した。',
+        qtyLabel: '出す数',
+        qtyPlaceholder: '例) 1',
+        notePlaceholder: '例) 提供 / 廃棄 / 破損',
+        submitLabel: '出庫する',
+      },
+      adjust: {
+        title: '棚卸',
+        help: '今ある本当の数をそのまま入れます。差は自動計算です。',
+        qtyLabel: '数えた数',
+        qtyPlaceholder: '例) 12',
+        notePlaceholder: '例) 月末棚卸',
+        submitLabel: '棚卸を反映',
+      }
+    }[mode] || {
+      title: '入庫',
+      help: '新しく入った分を増やします。例: 納品された。',
+      qtyLabel: '入れる数',
+      qtyPlaceholder: '例) 1',
+      notePlaceholder: '例) 納品 / 補充',
+      submitLabel: '入庫する',
+    };
+
+    opModeInput.value = mode;
+    actionSummaryTitle.textContent = meta.title;
+    actionSummaryText.textContent = meta.help;
+    qtyLabel.textContent = meta.qtyLabel;
+    qty.placeholder = meta.qtyPlaceholder;
+    noteInput.placeholder = meta.notePlaceholder;
+    submitBtn.textContent = meta.submitLabel;
+
+    document.querySelectorAll('.action-chip[data-op-mode]').forEach((el) => {
+      el.classList.toggle('is-active', el.getAttribute('data-op-mode') === mode);
+    });
+  }
+
   // ===== Enter即反映（数量入力中） =====
   qty.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -458,10 +780,14 @@ const Sound = (() => {
   function clearProducts(){
     list.innerHTML = '';
     pid.value = '';
+    pickedProduct.hidden = true;
+    pickedProductName.textContent = '';
   }
 
   window.selectProduct = function selectProduct(id, name){
     pid.value = String(id);
+    pickedProduct.hidden = false;
+    pickedProductName.textContent = String(name || '');
     Sound.ok();
     qty.focus();
     qty.select();
@@ -474,7 +800,7 @@ const Sound = (() => {
     body.textContent = '読み込み中…';
 
     try{
-      const res = await fetch(`/seika-app/public/stock/api/product_detail.php?id=${encodeURIComponent(id)}`, {
+      const res = await fetch(`/wbss/public/stock/api/product_detail.php?id=${encodeURIComponent(id)}`, {
         credentials: 'same-origin'
       });
       const ct = (res.headers.get('content-type') || '');
@@ -559,7 +885,7 @@ const Sound = (() => {
   async function search(v){
     if (!v) { clearProducts(); return {count:0}; }
 
-    const url = new URL('/seika-app/public/stock/api/products_search.php', location.origin);
+    const url = new URL('/wbss/public/stock/api/products_search.php', location.origin);
     url.searchParams.set('q', v);
     if (ptype) url.searchParams.set('ptype', ptype);
 
@@ -584,6 +910,15 @@ const Sound = (() => {
   q.addEventListener('input', () => {
     clearTimeout(timer);
     timer = setTimeout(() => search(q.value.trim()), 250);
+  });
+
+  document.querySelectorAll('.action-chip[data-op-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      Sound.arm();
+      applyOpMode(btn.getAttribute('data-op-mode') || 'in');
+      barcodeInput.focus();
+      barcodeInput.select();
+    });
   });
 
   barcodeInput.addEventListener('input', () => {
@@ -612,6 +947,7 @@ const Sound = (() => {
   // ===== 起動時：URLの q / barcode を自動適用 =====
   const params = new URLSearchParams(location.search);
   const pre = (params.get('q') || params.get('barcode') || '').trim();
+  applyOpMode(opModeInput.value || 'in');
   if (pre) {
     // すでにinputにvalueが入っていても、検索・自動選択を走らせる
     setTimeout(() => { applyCode(pre); }, 0);

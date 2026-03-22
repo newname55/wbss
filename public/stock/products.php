@@ -13,7 +13,7 @@ if (!is_role('super_user') && !is_role('admin') && !is_role('manager')) {
 
 $store_id = current_store_id();
 if ($store_id === null) {
-  header('Location: /seika-app/public/store_select.php');
+  header('Location: /wbss/public/store_select.php');
   exit;
 }
 $store_id = (int)$store_id;
@@ -107,7 +107,7 @@ function handle_upload_image(int $store_id, int $product_id): array {
   else return ['ok'=>false, 'url'=>null, 'err'=>'対応形式は JPG/PNG/WEBP のみです'];
 
   // 保存先（public配下に置く）
-  $baseDir = '/var/www/html/seika-app/public/uploads/products/' . $store_id;
+  $baseDir = '/var/www/html/wbss/public/uploads/products/' . $store_id;
   if (!is_dir($baseDir)) {
     @mkdir($baseDir, 0775, true);
   }
@@ -123,7 +123,7 @@ function handle_upload_image(int $store_id, int $product_id): array {
   }
   @chmod($dest, 0664);
 
-  $url = '/seika-app/public/uploads/products/' . $store_id . '/' . $fname;
+  $url = '/wbss/public/uploads/products/' . $store_id . '/' . $fname;
   return ['ok'=>true, 'url'=>$url, 'err'=>null];
 }
 
@@ -287,11 +287,11 @@ $st = $pdo->prepare($sql);
 $st->execute($params);
 $rows = $st->fetchAll();
 
-$right = '<a class="btn" href="/seika-app/public/stock/index.php">在庫ランチャー</a>';
+$right = '<a class="btn" href="/wbss/public/stock/index.php">在庫ランチャー</a>';
 
 render_page_start('商品マスタ');
 render_header('商品マスタ', [
-  'back_href' => '/seika-app/public/stock/index.php',
+  'back_href' => '/wbss/public/stock/index.php',
   'back_label' => '← 在庫',
   'right_html' => $right,
 ]);

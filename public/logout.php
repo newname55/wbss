@@ -11,5 +11,5 @@ if (ini_get("session.use_cookies")) {
 }
 session_destroy();
 
-header('Location: /seika-app/public/login.php?reason=logout');
+header('Location: /wbss/public/login.php?reason=logout');
 exit;

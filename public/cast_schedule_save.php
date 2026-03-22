@@ -1,8 +1,16 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../app/auth.php';
-require_once __DIR__ . '/../../app/db.php';
+require_once __DIR__ . '/../app/auth.php';
+require_once __DIR__ . '/../app/db.php';
+
+/**
+ * Legacy cast schedule save endpoint.
+ *
+ * Canonical rules:
+ * - plan source of truth: cast_shift_plans
+ * - actual source of truth: attendances
+ */
 
 require_login();
 $pdo = db();
@@ -57,66 +65,37 @@ for ($i=0; $i<7; $i++) {
 try {
   $pdo->beginTransaction();
 
+  $upPlan = $pdo->prepare("
+    INSERT INTO cast_shift_plans
+      (store_id, user_id, business_date, start_time, is_off, status, note, created_by_user_id)
+    VALUES
+      (?, ?, ?, NULL, ?, 'planned', ?, ?)
+    ON DUPLICATE KEY UPDATE
+      start_time=VALUES(start_time),
+      is_off=VALUES(is_off),
+      status='planned',
+      note=VALUES(note),
+      created_by_user_id=VALUES(created_by_user_id),
+      updated_at=NOW()
+  ");
+
   foreach ($dates as $d) {
     $isOn = isset($on[$d]) && (string)$on[$d] === '1';
     $memo = trim((string)($note[$d] ?? ''));
     $memo = ($memo === '') ? null : $memo;
 
-    // 既存行（予定or実績）を確認
-    $st = $pdo->prepare("
-      SELECT id, status, clock_in, clock_out
-      FROM attendances
-      WHERE user_id=? AND store_id=? AND business_date=?
-      LIMIT 1
-    ");
-    $st->execute([$userId, $storeId, $d]);
-    $row = $st->fetch(PDO::FETCH_ASSOC);
-
-    if (!$row) {
-      // 予定ONなら新規作成（scheduled）
-      if ($isOn) {
-        $pdo->prepare("
-          INSERT INTO attendances
-            (user_id, store_id, business_date, status, note, created_at, updated_at)
-          VALUES
-            (?, ?, ?, 'scheduled', ?, NOW(), NOW())
-        ")->execute([$userId, $storeId, $d, $memo]);
-      }
-      continue;
-    }
-
-    $id = (int)$row['id'];
-    $hasActual = !empty($row['clock_in']) || !empty($row['clock_out'])
-      || in_array((string)$row['status'], ['working','finished'], true);
-
-    // 実績がある日は「予定のON/OFF」で壊さない（メモだけ更新はOK）
-    if ($hasActual) {
-      $pdo->prepare("
-        UPDATE attendances
-        SET note=?, updated_at=NOW()
-        WHERE id=?
-        LIMIT 1
-      ")->execute([$memo, $id]);
-      continue;
-    }
-
-    // 実績が無い＝純予定
     if ($isOn) {
-      $pdo->prepare("
-        UPDATE attendances
-        SET status='scheduled', note=?, updated_at=NOW()
-        WHERE id=?
-        LIMIT 1
-      ")->execute([$memo, $id]);
-    } else {
-      // OFFにするなら、その日が純予定なら削除してOK（運用が楽）
-      $pdo->prepare("DELETE FROM attendances WHERE id=? LIMIT 1")->execute([$id]);
+      $upPlan->execute([$storeId, $userId, $d, 0, $memo, $userId ?: null]);
+      continue;
     }
+
+    // OFFは canonical plan table に is_off=1 で残す。
+    $upPlan->execute([$storeId, $userId, $d, 1, $memo, $userId ?: null]);
   }
 
   $pdo->commit();
 
-  header('Location: /seika-app/public/cast_schedule.php?week=' . urlencode($weekStart) . '&ok=1');
+  header('Location: /wbss/public/cast_schedule.php?week=' . urlencode($weekStart) . '&ok=1');
   exit;
 
 } catch (Throwable $e) {

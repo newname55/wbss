@@ -5,33 +5,16 @@ require_once __DIR__ . '/../../app/auth.php';
 require_once __DIR__ . '/../../app/store.php';
 
 require_login();
+require_role(['admin', 'manager', 'super_user']);
 
-// 権限：super/admin/manager
-if (!is_role('super_user') && !is_role('admin') && !is_role('manager')) {
-  http_response_code(403);
-  exit('Forbidden');
-}
-
-$store_id = current_store_id();
-if ($store_id === null) {
-  header('Location: /seika-app/public/store_select.php');
+$storeId = (int)(current_store_id() ?? 0);
+if ($storeId <= 0) {
+  header('Location: /wbss/public/store_select.php?return=' . rawurlencode('/wbss/public/points/index.php'));
   exit;
 }
-$store_id = (int)$store_id;
 
-function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
-?>
-<!doctype html>
-<html lang="ja">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ポイント・評価</title>
-<body>
-  <h1>ポイント・評価</h1>
-  <p>店舗ID: <?= (int)$store_id ?></p>
-  <p><a href="/seika-app/public/dashboard.php">← ダッシュボード</a></p>
+$query = $_GET;
+$query['store_id'] = $storeId;
 
-  <hr>
-  <p>TODO: ここにポイント付与 / 集計 / 能力給の基礎を作っていく</p>
-</body>
-</html>
+header('Location: /wbss/public/points_kpi.php?' . http_build_query($query), true, 302);
+exit;

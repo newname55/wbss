@@ -13,7 +13,7 @@ if (!is_role('super_user') && !is_role('admin') && !is_role('manager') && !is_ro
 
 $store_id = current_store_id();
 if ($store_id === null) {
-  header('Location: /seika-app/public/store_select.php');
+  header('Location: /wbss/public/store_select.php');
   exit;
 }
 $store_id = (int)$store_id;
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = '追加しました';
       }
 
-      header('Location: /seika-app/public/stock/locations/index.php?ok=1');
+      header('Location: /wbss/public/stock/locations/index.php?ok=1');
       exit;
     }
 
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $st->execute([$to, $id, $store_id]);
       $msg = $to ? '有効にしました' : '無効にしました';
 
-      header('Location: /seika-app/public/stock/locations/index.php?ok=1');
+      header('Location: /wbss/public/stock/locations/index.php?ok=1');
       exit;
     }
 
@@ -126,11 +126,11 @@ $st = $pdo->prepare("
 $st->execute([$store_id]);
 $rows = $st->fetchAll();
 
-$right = '<a class="btn" href="/seika-app/public/stock/index.php">在庫へ</a>';
+$right = '<a class="btn" href="/wbss/public/stock/index.php">在庫へ</a>';
 
 render_page_start('場所マスタ');
 render_header('場所マスタ', [
-  'back_href'  => '/seika-app/public/stock/index.php',
+  'back_href'  => '/wbss/public/stock/index.php',
   'back_label' => '← 在庫',
   'right_html' => $right,
 ]);
@@ -155,7 +155,7 @@ render_header('場所マスタ', [
         <div class="muted">例：バックヤード / キッチン / カウンター下 / 冷蔵庫 / 倉庫</div>
       </div>
       <?php if ($edit): ?>
-        <a class="btn" href="/seika-app/public/stock/locations/index.php">＋ 新規追加に戻る</a>
+        <a class="btn" href="/wbss/public/stock/locations/index.php">＋ 新規追加に戻る</a>
       <?php endif; ?>
     </div>
 
@@ -240,7 +240,7 @@ render_header('場所マスタ', [
               </td>
               <td style="padding:8px; border-bottom:1px solid var(--line); white-space:nowrap;"><?= h((string)$r['updated_at']) ?></td>
               <td style="padding:8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap;">
-                <a class="btn" href="/seika-app/public/stock/locations/index.php?edit_id=<?= (int)$r['id'] ?>">編集</a>
+                <a class="btn" href="/wbss/public/stock/locations/index.php?edit_id=<?= (int)$r['id'] ?>">編集</a>
 
                 <form method="post" style="display:inline-block; margin:0 0 0 6px;">
                   <input type="hidden" name="mode" value="toggle">

@@ -41,7 +41,7 @@ if ($uid > 0) {
   }
 }
 
-$back = (string)($_POST['back'] ?? '/seika-app/public/dashboard.php');
-if ($back === '') $back = '/seika-app/public/dashboard.php';
+$back = (string)($_POST['back'] ?? '/wbss/public/dashboard.php');
+if ($back === '') $back = '/wbss/public/dashboard.php';
 header('Location: ' . $back);
 exit;

@@ -29,7 +29,7 @@ try {
 
   $theme = trim($theme);
 
-  $allowed = ['light','dark','soft','high_contrast','store_color'];
+  $allowed = ['light','dark','cast','staff','soft','high_contrast','store_color'];
   if (!in_array($theme, $allowed, true)) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'Invalid theme'], JSON_UNESCAPED_UNICODE);

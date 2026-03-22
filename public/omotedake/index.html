@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>オモテダケ占い</title>
+
+<style>
+:root{
+  --bg1:#2a2a72;
+  --bg2:#5f4bb6;
+  --bg3:#ff9ad5;
+  --txt:#ffffff;
+
+  --card:rgba(255,255,255,.14);
+  --line:rgba(255,255,255,.18);
+
+  --pink:#ffb3df;
+  --gold:#ffd86f;
+  --violet:#c9b5ff;
+  --wine:#c28aa8;
+  --deep:#8c6aa9;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:"Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+  color:var(--txt);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(255,255,255,.45) 0 2px, transparent 3px),
+    radial-gradient(circle at 85% 25%, rgba(255,255,255,.35) 0 2px, transparent 3px),
+    radial-gradient(circle at 30% 80%, rgba(255,255,255,.25) 0 2px, transparent 3px),
+    linear-gradient(180deg,var(--bg1),var(--bg2),var(--bg3));
+  background-size:200px 200px,180px 180px,220px 220px,cover;
+}
+
+.container{
+  width:min(1180px, calc(100% - 24px));
+  margin:0 auto;
+  padding:28px 0 44px;
+}
+
+/* header */
+.header{
+  text-align:center;
+  margin-bottom:14px;
+}
+
+.header img{
+  width:min(820px, 100%);
+  margin-bottom:8px;
+}
+
+/* hero */
+.hero{
+  display:grid;
+  grid-template-columns: 1.05fr .95fr;
+  gap:24px;
+  align-items:center;
+  margin-bottom:22px;
+}
+
+.heroText,
+.heroVisual{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:28px;
+  box-shadow:0 12px 28px rgba(0,0,0,.18);
+  backdrop-filter:blur(8px);
+}
+
+.heroText{
+  padding:30px 28px;
+  text-align:left;
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  background:rgba(255,255,255,.18);
+  padding:8px 14px;
+  border-radius:999px;
+  font-size:13px;
+  font-weight:800;
+  margin-bottom:16px;
+}
+
+.title{
+  font-size:clamp(28px, 4vw, 42px);
+  font-weight:900;
+  line-height:1.35;
+  margin:0 0 10px;
+}
+
+.desc{
+  font-size:16px;
+  line-height:1.9;
+  opacity:.95;
+  margin:0 0 22px;
+}
+
+.ctaRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+}
+
+.cta{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px 28px;
+  border-radius:40px;
+  background:linear-gradient(135deg,#ffd86f,#ff9ad5);
+  color:white;
+  font-weight:bold;
+  text-decoration:none;
+  font-size:17px;
+  box-shadow:0 8px 20px rgba(0,0,0,.3);
+  transition:.2s;
+}
+
+.cta:hover{
+  transform:translateY(-3px);
+}
+
+.cta:active{
+  transform:scale(.96);
+}
+
+.cta.sub{
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.18);
+}
+
+.heroVisual{
+  position:relative;
+  text-align:center;
+  padding:24px 20px 20px;
+  overflow:hidden;
+}
+
+.heroVisual::after{
+  content:"✨ ⭐ 🌟";
+  position:absolute;
+  top:120px;
+  left:22px;
+  font-size:28px;
+  animation:sparkle 2s linear infinite;
+}
+
+.mainChar{
+  width:min(420px, 100%);
+  animation:omoteFloat 3s ease-in-out infinite;
+  filter:drop-shadow(0 15px 25px rgba(0,0,0,.35));
+}
+
+@keyframes omoteFloat{
+  0%{ transform:translateY(0px); }
+  50%{ transform:translateY(-14px); }
+  100%{ transform:translateY(0px); }
+}
+
+@keyframes sparkle{
+  0%{ transform:translateY(0); opacity:0; }
+  50%{ opacity:1; }
+  100%{ transform:translateY(-30px); opacity:0; }
+}
+
+/* chips */
+.fortune-menu{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin:0 0 26px;
+}
+
+.fortune-menu span{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:9px 14px;
+  border-radius:999px;
+  font-size:14px;
+  background:rgba(255,255,255,0.2);
+  color:white;
+  text-decoration:none;
+}
+
+/* cards */
+.sectionTitle{
+  text-align:center;
+  font-size:28px;
+  font-weight:900;
+  margin:8px 0 8px;
+}
+
+.sectionDesc{
+  text-align:center;
+  font-size:15px;
+  opacity:.92;
+  margin:0 0 24px;
+}
+
+.castGrid{
+  display:grid;
+  grid-template-columns:repeat(5, minmax(0,1fr));
+  gap:16px;
+  margin-bottom:28px;
+}
+
+.castCard{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:24px;
+  box-shadow:0 12px 28px rgba(0,0,0,.16);
+  backdrop-filter:blur(8px);
+  padding:16px 14px 18px;
+  text-align:center;
+  transition:.2s;
+}
+
+.castCard:hover{
+  transform:translateY(-4px);
+}
+
+.castImageWrap{
+  height:170px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  margin-bottom:12px;
+}
+
+.castImage{
+  max-width:100%;
+  max-height:165px;
+  object-fit:contain;
+  filter:drop-shadow(0 10px 18px rgba(0,0,0,.28));
+}
+
+.castName{
+  font-size:21px;
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+.castRole{
+  display:inline-block;
+  font-size:12px;
+  font-weight:900;
+  padding:6px 12px;
+  border-radius:999px;
+  margin-bottom:10px;
+  color:#4f2d4f;
+  background:#fff2fb;
+}
+
+.castDesc{
+  font-size:13px;
+  line-height:1.75;
+  opacity:.96;
+  min-height:66px;
+  margin-bottom:12px;
+}
+
+.castMeta{
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.castMeta span{
+  font-size:12px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.16);
+}
+
+/* role colors */
+.anata .castRole{ background:#ffe4f2; color:#9c3d70; }
+.osu .castRole{ background:#f5e7ea; color:#7c3f58; }
+.kanedake .castRole{ background:#e9ebff; color:#4d57a3; }
+.yake .castRole{ background:#f0e5f7; color:#6e3e84; }
+.omote .castRole{ background:#fff1d5; color:#8c6230; }
+
+/* route */
+.routeBox{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:28px;
+  box-shadow:0 12px 28px rgba(0,0,0,.16);
+  backdrop-filter:blur(8px);
+  padding:24px;
+  margin-bottom:24px;
+}
+
+.routeGrid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:14px;
+}
+
+.routeItem{
+  background:rgba(255,255,255,.12);
+  border-radius:20px;
+  padding:18px 16px;
+  text-align:center;
+}
+
+.routeItem h3{
+  margin:0 0 8px;
+  font-size:18px;
+}
+
+.routeItem p{
+  margin:0;
+  font-size:13px;
+  line-height:1.8;
+  opacity:.94;
+}
+
+/* footer */
+.footer{
+  text-align:center;
+  margin-top:18px;
+  font-size:12px;
+  opacity:.78;
+}
+
+/* responsive */
+@media (max-width: 1040px){
+  .castGrid{
+    grid-template-columns:repeat(3, minmax(0,1fr));
+  }
+}
+
+@media (max-width: 820px){
+  .container{
+    width:min(100%, calc(100% - 24px));
+    padding:18px 0 28px;
+  }
+
+  .hero{
+    grid-template-columns:1fr;
+  }
+
+  .heroText{
+    text-align:center;
+  }
+
+  .ctaRow{
+    justify-content:center;
+  }
+
+  .routeGrid{
+    grid-template-columns:1fr;
+  }
+
+  .castGrid{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+
+  .heroVisual::after{
+    top:82px;
+    left:10px;
+    font-size:20px;
+  }
+
+  .mainChar{
+    width:min(320px, 100%);
+  }
+}
+
+@media (max-width: 520px){
+  .castGrid{
+    grid-template-columns:1fr;
+  }
+
+  .title{
+    font-size:24px;
+  }
+
+  .desc{
+    font-size:15px;
+  }
+
+  .sectionTitle{
+    font-size:24px;
+  }
+
+  .cta{
+    width:100%;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <img src="./images/header-main.png" alt="オモテダケ占い">
+  </div>
+
+  <section class="hero">
+    <div class="heroText">
+      <div class="badge">🍄 5人のキャラが運命を占うダケ</div>
+      <h1 class="title">キミの運命も、恋も、仕事も、<br>みんなでのぞいてみるダケ！</h1>
+      <p class="desc">
+        オモテダケワールドへようこそ。<br>
+        今日の運勢と恋愛運はアナタダケ、仕事運はオスダケ、金運はカネダケ、人間関係はヤケザケ。<br>
+        気になることを、それぞれのキャラがふんわり占うよ。
+      </p>
+      <div class="ctaRow">
+        <a class="cta" href="fortune.php">🔮 占ってみる</a>
+        <a class="cta sub" href="omoteaichat.php">🗣️ AI相談してみる</a>
+      </div>
+    </div>
+
+    <div class="heroVisual">
+      <img class="mainChar" src="./images/omotedake-main.png" alt="オモテダケ">
+    </div>
+  </section>
+
+  <div class="fortune-menu">
+    <span>💖 今日の運勢 → アナタダケ</span>
+    <span>💕 恋愛運 → アナタダケ</span>
+    <span>📈 仕事運 → オスダケ</span>
+    <span>💰 金運 → カネダケ</span>
+    <span>🫧 人間関係 → ヤケザケ</span>
+  </div>
+<div class="ctaRow" style="justify-content:center; margin:18px 0;">
+  <a class="cta sub" href="omotedake_world_map.php">🍄 オモテダケワールドMAP</a>
+  <a class="cta sub" href="omotedake_story.php">📖 オモテダケの物語</a>
+</div>
+
+  <h2 class="sectionTitle">キャラクターたち</h2>
+  <p class="sectionDesc">
+    それぞれ得意な相談が違うダケ。<br>
+    気分に合わせて、相談したい相手を選んでみてね。
+  </p>
+
+  <section class="castGrid">
+    <article class="castCard omote">
+      <div class="castImageWrap">
+        <img class="castImage" src="./images/omotedake-indexmain.png" alt="オモテダケ">
+      </div>
+      <div class="castName">オモテダケ</div>
+      <div class="castRole">今日の運勢 / 案内役</div>
+      <div class="castDesc">
+        オモテダケワールドの顔。<br>
+        やさしくみんなを案内してくれる、占い好きなキノコ。
+      </div>
+      <div class="castMeta">
+        <span>🍄 メインキャラ</span>
+        <span>✨ 案内役</span>
+      </div>
+    </article>
+
+    <article class="castCard anata">
+      <div class="castImageWrap">
+        <img class="castImage" src="./images/anatadake-main.png" alt="アナタダケ">
+      </div>
+      <div class="castName">アナタダケ</div>
+      <div class="castRole">今日の運勢 / 恋愛運</div>
+      <div class="castDesc">
+        ピンクの恋愛特化キノコ。<br>
+        アナタのことを近くで見つめて、今日の運勢と恋の流れを占うよ。
+      </div>
+      <div class="castMeta">
+        <span>💖 恋愛担当</span>
+        <span>🌙 うるうる系</span>
+      </div>
+    </article>
+
+    <article class="castCard osu">
+      <div class="castImageWrap">
+        <img class="castImage" src="./images/osudake-main.png" alt="オスダケ">
+      </div>
+      <div class="castName">オスダケ</div>
+      <div class="castRole">今日の運勢 / 仕事運</div>
+      <div class="castDesc">
+        落ち着いた大人の助言担当。<br>
+        仕事や現実の悩みに、頼れる兄貴っぽく答えてくれる。
+      </div>
+      <div class="castMeta">
+        <span>📈 仕事担当</span>
+        <span>🕶️ 大人の余裕</span>
+      </div>
+    </article>
+
+    <article class="castCard kanedake">
+      <div class="castImageWrap">
+        <img class="castImage" src="./images/kanedake-main.png" alt="カネダケ">
+      </div>
+      <div class="castName">カネダケ</div>
+      <div class="castRole">今日の運勢 / 金運</div>
+      <div class="castDesc">
+        金色の神秘的なキノコ。<br>
+        お金の流れやチャンスを見つけるのが得意なラッキー担当。
+      </div>
+      <div class="castMeta">
+        <span>💰 金運担当</span>
+        <span>🍄 キノコ</span>
+      </div>
+    </article>
+
+    <article class="castCard yake">
+      <div class="castImageWrap">
+        <img class="castImage" src="./images/yakezake-main.png" alt="ヤケザケ">
+      </div>
+      <div class="castName">ヤケザケ</div>
+      <div class="castRole">今日の運勢 / 人間関係</div>
+      <div class="castDesc">
+        ダークで本音に鋭いお姉さん。<br>
+        人間関係のもつれや本心を、少し危うくも深く見抜いてくれる。
+      </div>
+      <div class="castMeta">
+        <span>🫧 人間関係担当</span>
+        <span>🍶 ダークサイド</span>
+      </div>
+    </article>
+  </section>
+
+  <section class="routeBox">
+    <h2 class="sectionTitle">どう遊ぶ？</h2>
+    <div class="routeGrid">
+      <div class="routeItem">
+        <h3>🔮 ワンタップ占い</h3>
+        <p>
+          気になるテーマを押すだけ。<br>
+          オモテダケがすぐに結果を出してくれるよ。
+        </p>
+      </div>
+      <div class="routeItem">
+        <h3>🗣️ AI相談</h3>
+        <p>
+          悩みを話しかけると、内容に合わせて<br>
+          キャラが切り替わって答えてくれるよ。
+        </p>
+      </div>
+      <div class="routeItem">
+        <h3>✨ キャラを楽しむ</h3>
+        <p>
+          オモテダケワールドの個性豊かな5人を、<br>
+          相談しながら少しずつ知っていこう。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    © オモテダケ占い
+  </div>
+
+</div>
+
+</body>
+</html>

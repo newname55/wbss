@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * API 共通ユーティリティ
- * DB接続は seika-app 本体（app/db.php）の db() をそのまま使う
+ * DB接続は WBSS 本体（app/db.php）の db() をそのまま使う
  */
 
 // 既存アプリのDB接続・ヘルパーを読み込む

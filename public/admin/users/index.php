@@ -258,11 +258,11 @@ if ($edit_id > 0) {
   }
 }
 
-$right = '<a class="btn" href="/seika-app/public/store_select.php">店舗選択へ</a>';
+$right = '<a class="btn" href="/wbss/public/store_select.php">店舗選択へ</a>';
 
 render_page_start('ユーザー管理');
 render_header('ユーザー管理', [
-  'back_href' => '/seika-app/public/store_select.php',
+  'back_href' => '/wbss/public/store_select.php',
   'back_label' => '← 戻る',
   'right_html' => $right,
 ]);
@@ -278,7 +278,7 @@ render_header('ユーザー管理', [
         <div style="font-weight:1000; font-size:16px;">ユーザー一覧</div>
         <div class="muted">削除は禁止（is_active=0で無効化）。役割は複数・店舗別に付与OK。</div>
       </div>
-      <a class="btn btn-primary" href="/seika-app/public/admin/users/index.php?edit_id=0">＋ 新規作成</a>
+      <a class="btn btn-primary" href="/wbss/public/admin/users/index.php?edit_id=0">＋ 新規作成</a>
     </div>
 
     <div style="overflow:auto; margin-top:12px;">
@@ -331,7 +331,7 @@ render_header('ユーザー管理', [
                 <td style="padding:8px; border-bottom:1px solid var(--line); white-space:nowrap;"><?= h((string)($u['updated_at'] ?? '')) ?></td>
               <?php endif; ?>
               <td style="padding:8px; border-bottom:1px solid var(--line); white-space:nowrap;">
-                <a class="btn" href="/seika-app/public/admin/users/index.php?edit_id=<?= (int)$u['id'] ?>">編集</a>
+                <a class="btn" href="/wbss/public/admin/users/index.php?edit_id=<?= (int)$u['id'] ?>">編集</a>
               </td>
             </tr>
           <?php endforeach; ?>

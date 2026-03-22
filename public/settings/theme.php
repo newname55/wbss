@@ -40,7 +40,7 @@ $current = (string)($_SESSION['ui_theme'] ?? current_ui_theme());
 
 render_page_start('表示テーマ');
 render_header('表示テーマ', [
-  'back_href' => '/seika-app/public/dashboard.php',
+  'back_href' => '/wbss/public/dashboard.php',
   'back_label' => '← ダッシュボード',
   'right_html' => '',
 ]);

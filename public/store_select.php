@@ -6,138 +6,358 @@ require_once __DIR__ . '/../app/db.php';
 require_once __DIR__ . '/../app/layout.php';
 require_once __DIR__ . '/../app/store.php';
 
-ensure_session();
 require_login();
-
-if (!function_exists('h')) {
-  function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
-}
-
-/* CSRF */
-if (!function_exists('csrf_token')) {
-  function csrf_token(): string {
-    if (session_status() !== PHP_SESSION_ACTIVE) session_start();
-    if (empty($_SESSION['_csrf'])) $_SESSION['_csrf'] = bin2hex(random_bytes(16));
-    return (string)$_SESSION['_csrf'];
-  }
-}
-function verify_csrf(): void {
-  $t = (string)($_POST['csrf_token'] ?? '');
-  if ($t === '' || !hash_equals((string)($_SESSION['_csrf'] ?? ''), $t)) {
-    http_response_code(400);
-    exit('Bad Request (csrf)');
-  }
-}
+require_role(['admin','manager','super_user']);
 
 $pdo = db();
-$uid = (int)($_SESSION['user_id'] ?? 0);
-$msg = '';
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+
+function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+function has_role(string $role): bool { return isset($_SESSION['roles']) && in_array($role, $_SESSION['roles'], true); }
+
+$userId  = function_exists('current_user_id') ? (int)current_user_id() : (int)($_SESSION['user_id'] ?? 0);
+$isSuper = has_role('super_user');
+$isAdmin = has_role('admin');
+$isMgr   = has_role('manager');
+
+$returnTo = (string)($_GET['return'] ?? '/wbss/public/dashboard.php');
+if ($returnTo === '' || $returnTo[0] !== '/') {
+  $returnTo = '/wbss/public/dashboard.php';
+}
+if (preg_match('/^\/{2,}/', $returnTo)) {
+  $returnTo = '/wbss/public/dashboard.php';
+}
+if (strpos($returnTo, '/wbss/public/') !== 0) {
+  $returnTo = '/wbss/public/dashboard.php';
+}
+
+$stores = [];
+if ($isSuper || $isAdmin) {
+  $stores = $pdo->query("SELECT id,name FROM stores WHERE is_active=1 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+} else {
+  // manager: 紐づく店だけ
+  $st = $pdo->prepare("
+    SELECT DISTINCT s.id, s.name
+    FROM user_roles ur
+    JOIN roles r ON r.id=ur.role_id AND r.code='manager'
+    JOIN stores s ON s.id=ur.store_id AND s.is_active=1
+    WHERE ur.user_id=? AND ur.store_id IS NOT NULL
+    ORDER BY s.id ASC
+  ");
+  $st->execute([$userId]);
+  $stores = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
+if (!$stores) {
+  http_response_code(403);
+  exit('店舗に紐付いていません');
+}
+
+$selected = get_current_store_id();
+if ($selected <= 0) $selected = (int)$stores[0]['id'];
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && count($stores) === 1) {
+  $onlyStoreId = (int)$stores[0]['id'];
+  if ($selected !== $onlyStoreId) {
+    set_current_store_id($onlyStoreId);
+  }
+  header('Location: ' . $returnTo);
+  exit;
+}
+
 $err = '';
 
-$next = (string)($_GET['next'] ?? '/seika-app/public/dashboard.php');
-
-/* POST: 選択 */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  verify_csrf();
   $sid = (int)($_POST['store_id'] ?? 0);
-  if ($sid <= 0) {
-    $err = '店舗を選択してください';
+  $allowed = array_map(fn($s)=>(int)$s['id'], $stores);
+
+  if ($sid <= 0 || !in_array($sid, $allowed, true)) {
+    $err = '店舗が不正です';
   } else {
-    // アクセス可能か確認
-    $isAdmin = function_exists('is_role') ? (is_role('super_user') || is_role('admin')) : false;
-
-    if ($isAdmin) {
-      $ok = (bool)$pdo->prepare("SELECT 1 FROM stores WHERE id=? AND is_active=1 LIMIT 1")
-                      ->execute([$sid]) ?: true;
-    } else {
-      $st = $pdo->prepare("
-        SELECT 1
-        FROM stores s
-        WHERE s.id=? AND s.is_active=1
-          AND EXISTS (
-            SELECT 1
-            FROM user_roles ur
-            WHERE ur.user_id=?
-              AND (ur.store_id = s.id OR ur.store_id IS NULL)
-          )
-        LIMIT 1
-      ");
-      $st->execute([$sid, $uid]);
-      $ok = (bool)$st->fetchColumn();
-    }
-
-    if (!$ok) {
-      $err = 'この店舗への権限がありません';
-    } else {
-      // store.php 側に setter があるなら使う（無ければセッション直書き）
-      if (function_exists('set_current_store_id')) {
-        set_current_store_id($sid);
-      } else {
-        $_SESSION['store_id'] = $sid;
-      }
-      header('Location: ' . $next);
-      exit;
-    }
+    set_current_store_id($sid);
+    header('Location: ' . $returnTo);
+    exit;
   }
 }
 
-/* 店舗一覧 */
-$isAdmin = function_exists('is_role') ? (is_role('super_user') || is_role('admin')) : false;
-
-if ($isAdmin) {
-  $stores = $pdo->query("SELECT id,name,is_active FROM stores WHERE is_active=1 ORDER BY id")->fetchAll();
-} else {
-  $st = $pdo->prepare("
-    SELECT s.id, s.name, s.is_active
-    FROM stores s
-    WHERE s.is_active=1
-      AND EXISTS (
-        SELECT 1
-        FROM user_roles ur
-        WHERE ur.user_id=?
-          AND (ur.store_id = s.id OR ur.store_id IS NULL)
-      )
-    ORDER BY s.id
-  ");
-  $st->execute([$uid]);
-  $stores = $st->fetchAll();
+$storeCount = count($stores);
+$selectedStore = null;
+foreach ($stores as $store) {
+  if ((int)$store['id'] === $selected) {
+    $selectedStore = $store;
+    break;
+  }
 }
 
 render_page_start('店舗選択');
 render_header('店舗選択', [
-  'back_href' => '/seika-app/public/dashboard.php',
-  'back_label' => '← 戻る',
+  'back_href'  => '/wbss/public/logout.php',
+  'back_label' => 'ログアウト',
+  'right_html' => $selectedStore
+    ? '<span class="pill"><span class="pill__label">現在</span><span class="pill__value">' . h((string)$selectedStore['name']) . ' (#' . (int)$selectedStore['id'] . ')</span></span>'
+    : '',
 ]);
 ?>
 <div class="page">
+  <div class="store-select-shell">
+    <?php if ($err): ?>
+      <div class="store-select-flash is-error"><?= h($err) ?></div>
+    <?php endif; ?>
 
-  <?php if ($msg): ?><div class="card" style="border-color:rgba(52,211,153,.35);"><?= h($msg) ?></div><?php endif; ?>
-  <?php if ($err): ?><div class="card" style="border-color:rgba(251,113,133,.45);"><?= h($err) ?></div><?php endif; ?>
-  <div class="card">
-    <div style="font-weight:1000; font-size:16px;">入る店舗を選んでください</div>
-    <div class="muted" style="margin-top:6px;">
-      このユーザーが権限を持つ店舗だけ表示します（応援・兼務もOK）。
-    </div>
-<?php if (is_role('admin') || is_role('super_user')): ?>
-  <a class="btn" href="/seika-app/public/admin/index.php">管理</a>
-<?php endif; ?>
-    <form method="post" style="margin-top:12px;">
-      <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
-      <input type="hidden" name="next" value="<?= h($next) ?>">
+    <section class="store-select-hero">
+      <div class="store-select-hero__main">
+        <div class="store-select-kicker">Store Access</div>
+        <h1>作業する店舗を選択</h1>
+        <p>選んだ店舗はこのセッションに保持されます。日報、勤怠、管理画面はこの店舗を基準に表示されます。</p>
 
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-top:10px;">
-        <?php foreach ($stores as $s): ?>
-          <button class="btn" type="submit" name="store_id" value="<?= (int)$s['id'] ?>" style="justify-content:flex-start;">
-            🏪 <?= h((string)$s['name']) ?> <span class="muted" style="margin-left:auto;">#<?= (int)$s['id'] ?></span>
-          </button>
-        <?php endforeach; ?>
+        <div class="store-select-summary">
+          <span class="store-select-chip">アクセス可能 <?= number_format($storeCount) ?> 店舗</span>
+          <?php if ($selectedStore): ?>
+            <span class="store-select-chip is-current">現在 <?= h((string)$selectedStore['name']) ?></span>
+          <?php endif; ?>
+          <?php if ($isSuper): ?>
+            <span class="store-select-chip">権限 super_user</span>
+          <?php elseif ($isAdmin): ?>
+            <span class="store-select-chip">権限 admin</span>
+          <?php elseif ($isMgr): ?>
+            <span class="store-select-chip">権限 manager</span>
+          <?php endif; ?>
+        </div>
       </div>
 
-      <?php if (!$stores): ?>
-        <div class="muted" style="margin-top:12px;">権限のある店舗がありません（管理者に権限付与を依頼してください）</div>
-      <?php endif; ?>
-    </form>
-  </div>
+      <div class="store-select-hero__side">
+        <a class="btn" href="/wbss/public/logout.php">ログアウト</a>
+        <a class="btn btn-primary" href="<?= h($returnTo) ?>">戻る</a>
+      </div>
+    </section>
 
+    <section class="store-select-card">
+      <div class="store-select-head">
+        <div>
+          <h2>店舗一覧</h2>
+          <p>カードを押すだけで切り替えられます。選択済みの店舗は強調表示されます。</p>
+        </div>
+      </div>
+
+      <div class="store-grid">
+        <?php foreach ($stores as $s): ?>
+          <?php
+            $storeId = (int)$s['id'];
+            $isCurrent = ($storeId === $selected);
+          ?>
+          <form method="post" class="store-card-form">
+            <input type="hidden" name="store_id" value="<?= $storeId ?>">
+            <button type="submit" class="store-card<?= $isCurrent ? ' is-current' : '' ?>">
+              <span class="store-card__meta">
+                <span class="store-card__id">#<?= $storeId ?></span>
+                <?php if ($isCurrent): ?>
+                  <span class="store-card__badge">選択中</span>
+                <?php endif; ?>
+              </span>
+              <span class="store-card__name"><?= h((string)$s['name']) ?></span>
+              <span class="store-card__action"><?= $isCurrent ? 'この店舗で継続' : 'この店舗に切替' ?></span>
+            </button>
+          </form>
+        <?php endforeach; ?>
+      </div>
+    </section>
+  </div>
 </div>
+
+<style>
+.store-select-shell{
+  max-width:980px;
+  margin:0 auto;
+  padding-bottom:28px;
+}
+.store-select-flash,
+.store-select-hero,
+.store-select-card{
+  border:1px solid var(--line);
+  border-radius:22px;
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)), var(--cardA);
+  box-shadow:0 16px 40px rgba(0,0,0,.12);
+}
+.store-select-flash{
+  padding:12px 14px;
+  margin-bottom:12px;
+}
+.store-select-flash.is-error{
+  border-color:rgba(239,68,68,.40);
+}
+.store-select-hero{
+  padding:20px;
+  display:grid;
+  grid-template-columns:minmax(0, 1.3fr) auto;
+  gap:16px;
+  align-items:start;
+}
+.store-select-kicker{
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.store-select-hero h1{
+  margin:10px 0 8px;
+  font-size:30px;
+  line-height:1.1;
+}
+.store-select-hero p{
+  margin:0;
+  color:var(--muted);
+  line-height:1.6;
+}
+.store-select-summary{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:16px;
+}
+.store-select-chip{
+  display:inline-flex;
+  align-items:center;
+  min-height:34px;
+  padding:0 12px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.05);
+  font-size:12px;
+  font-weight:800;
+}
+.store-select-chip.is-current{
+  border-color:color-mix(in srgb, var(--accent) 40%, var(--line));
+  background:color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.store-select-hero__side{
+  display:grid;
+  gap:10px;
+  min-width:180px;
+}
+.store-select-card{
+  margin-top:14px;
+  padding:18px;
+}
+.store-select-head{
+  margin-bottom:14px;
+}
+.store-select-head h2{
+  margin:0;
+  font-size:20px;
+}
+.store-select-head p{
+  margin:6px 0 0;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.5;
+}
+.store-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  gap:12px;
+}
+.store-card-form{
+  margin:0;
+}
+.store-card{
+  width:100%;
+  min-height:144px;
+  padding:16px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.04);
+  color:var(--txt);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  text-align:left;
+  cursor:pointer;
+  transition:transform .08s ease, border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.store-card:hover{
+  transform:translateY(-1px);
+  border-color:color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+.store-card.is-current{
+  border-color:color-mix(in srgb, var(--accent) 50%, var(--line));
+  background:color-mix(in srgb, var(--accent) 10%, var(--cardA));
+  box-shadow:0 14px 24px rgba(0,0,0,.10);
+}
+.store-card__meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.store-card__id,
+.store-card__badge{
+  display:inline-flex;
+  align-items:center;
+  min-height:28px;
+  padding:0 10px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  font-size:11px;
+  font-weight:900;
+  background:rgba(255,255,255,.05);
+}
+.store-card__badge{
+  border-color:rgba(34,197,94,.35);
+  background:rgba(34,197,94,.14);
+  color:var(--ok);
+}
+.store-card__name{
+  display:block;
+  font-size:22px;
+  font-weight:1000;
+  line-height:1.2;
+}
+.store-card__action{
+  display:block;
+  margin-top:auto;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:800;
+}
+body[data-theme="light"] .store-select-flash,
+body[data-theme="light"] .store-select-hero,
+body[data-theme="light"] .store-select-card,
+body[data-theme="light"] .store-card{
+  background:#fff;
+  border-color:var(--line);
+  box-shadow:0 12px 24px rgba(15,18,34,.08);
+}
+body[data-theme="light"] .store-select-chip,
+body[data-theme="light"] .store-card__id{
+  background:#fff;
+  border-color:var(--line);
+}
+body[data-theme="light"] .store-card.is-current{
+  background:var(--softBlue);
+}
+@media (max-width: 720px){
+  .store-select-hero{
+    grid-template-columns:1fr;
+    padding:16px;
+  }
+  .store-select-hero h1{
+    font-size:24px;
+  }
+  .store-select-hero__side{
+    min-width:0;
+  }
+  .store-grid{
+    grid-template-columns:1fr;
+  }
+  .store-card{
+    min-height:0;
+    padding:14px;
+    gap:10px;
+  }
+  .store-card__name{
+    font-size:19px;
+  }
+}
+</style>
 <?php render_page_end(); ?>

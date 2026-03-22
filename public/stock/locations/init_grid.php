@@ -13,7 +13,7 @@ if (!is_role('super_user') && !is_role('admin')) {
 
 $store_id = current_store_id();
 if ($store_id === null) {
-  header('Location: /seika-app/public/store_select.php');
+  header('Location: /wbss/public/store_select.php');
   exit;
 }
 $store_id = (int)$store_id;
@@ -166,9 +166,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 render_page_start('在庫 初期化（場所×商品）');
 render_header('在庫 初期化（場所×商品）', [
-  'back_href'  => '/seika-app/public/stock/locations/index.php',
+  'back_href'  => '/wbss/public/stock/locations/index.php',
   'back_label' => '← 場所マスタ',
-  'right_html' => '<a class="btn" href="/seika-app/public/stock/index.php">在庫ランチャー</a>',
+  'right_html' => '<a class="btn" href="/wbss/public/stock/index.php">在庫ランチャー</a>',
 ]);
 ?>
 <div class="page">

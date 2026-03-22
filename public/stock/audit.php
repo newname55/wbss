@@ -13,7 +13,7 @@ if (!is_role('super_user') && !is_role('admin') && !is_role('manager')) {
 
 $store_id = current_store_id();
 if ($store_id === null) {
-  header('Location: /seika-app/public/store_select.php');
+  header('Location: /wbss/public/store_select.php');
   exit;
 }
 $store_id = (int)$store_id;
@@ -224,9 +224,9 @@ try {
 
 render_page_start('監査（在庫チェック）');
 render_header('監査（在庫チェック）', [
-  'back_href' => '/seika-app/public/stock/index.php',
+  'back_href' => '/wbss/public/stock/index.php',
   'back_label' => '← 在庫',
-  'right_html' => '<a class="btn" href="/seika-app/public/stock/moves/history.php">入出庫履歴</a>',
+  'right_html' => '<a class="btn" href="/wbss/public/stock/moves/history.php">入出庫履歴</a>',
 ]);
 
 ?>
@@ -298,7 +298,7 @@ render_header('監査（在庫チェック）', [
   <div class="card" style="margin-top:16px;">
     <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
       <div style="font-weight:1000;">① マイナス在庫（最優先で直す）</div>
-      <a class="btn" href="/seika-app/public/stock/move.php">入出庫で直す</a>
+      <a class="btn" href="/wbss/public/stock/move.php">入出庫で直す</a>
     </div>
     <div class="muted" style="margin-top:6px;">出庫が先に入った/棚卸がズレた/二重計上など。</div>
 
@@ -324,7 +324,7 @@ render_header('監査（在庫チェック）', [
                   <?= (int)$r['qty'] ?><?= h((string)($r['unit'] ?? '')) ?>
                 </td>
                 <td style="padding:8px; border-bottom:1px solid var(--line);">
-                  <a class="btn" style="min-height:42px;" href="/seika-app/public/stock/move.php">入出庫/棚卸で修正</a>
+                  <a class="btn" style="min-height:42px;" href="/wbss/public/stock/move.php">入出庫/棚卸で修正</a>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -388,7 +388,7 @@ render_header('監査（在庫チェック）', [
   <div class="card" style="margin-top:16px;">
     <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
       <div style="font-weight:1000;">③ 商品マスタ：必須欠け（カテゴリ/種別）</div>
-      <a class="btn" href="/seika-app/public/stock/products/index.php">商品マスタへ</a>
+      <a class="btn" href="/wbss/public/stock/products/index.php">商品マスタへ</a>
     </div>
     <div class="muted" style="margin-top:6px;">
       ここが欠けると「登録できない」「検索が弱い」「集計が崩れる」原因になる。
@@ -418,7 +418,7 @@ render_header('監査（在庫チェック）', [
                 <td style="padding:8px; border-bottom:1px solid var(--line);"><?= h((string)($r['product_type'] ?? '')) ?></td>
                 <td style="padding:8px; border-bottom:1px solid var(--line);"><?= $r['category_id'] === null ? '<span style="color:var(--ng); font-weight:1000;">NULL</span>' : (int)$r['category_id'] ?></td>
                 <td style="padding:8px; border-bottom:1px solid var(--line);">
-                  <a class="btn" style="min-height:42px;" href="/seika-app/public/stock/products/index.php?edit_id=<?= (int)$r['id'] ?>">編集</a>
+                  <a class="btn" style="min-height:42px;" href="/wbss/public/stock/products/index.php?edit_id=<?= (int)$r['id'] ?>">編集</a>
                 </td>
               </tr>
             <?php endforeach; ?>

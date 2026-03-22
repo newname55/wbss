@@ -10,8 +10,22 @@ if (!function_exists('h')) {
 
 /** テーマ取得（session優先 → DB → default） */
 function current_ui_theme(): string {
+  // 古いテーマキーのマッピング（マイグレーション用）
+  $legacy_map = [
+    'soft' => 'dark',            // 旧: Soft/Night -> dark に統合
+    'high_contrast' => 'staff',  // 旧: High Contrast -> staff
+    'store_color' => 'cast',     // 旧: Store Color -> cast
+  ];
+
   $t = (string)($_SESSION['ui_theme'] ?? '');
-  if ($t !== '') return $t;
+
+  if ($t !== '') {
+    if (array_key_exists($t, $legacy_map)) {
+      $t = $legacy_map[$t];
+      $_SESSION['ui_theme'] = $t;
+    }
+    return $t;
+  }
 
   $uid = (int)($_SESSION['user_id'] ?? 0);
   if ($uid <= 0) return 'dark';
@@ -23,6 +37,9 @@ function current_ui_theme(): string {
     $r = $st->fetch();
     $t = $r ? (string)($r['ui_theme'] ?? '') : '';
     if ($t === '') $t = 'dark';
+    if (array_key_exists($t, $legacy_map)) {
+      $t = $legacy_map[$t];
+    }
     $_SESSION['ui_theme'] = $t; // キャッシュ
     return $t;
   } catch (Throwable $e) {
@@ -45,11 +62,15 @@ function layout_store_name(?int $store_id): string {
 }
 function render_user_menu_html(): string {
   $options = [
-    'light'         => 'Light（現場）',
-    'dark'          => 'Dark（標準）',
-    'soft'          => 'Soft（夜）',
-    'high_contrast' => 'High Contrast',
-    'store_color'   => 'Store Color',
+
+
+
+
+
+    'light' => 'Light（現場）',
+    'dark'  => 'Dark（標準）',
+    'cast'  => 'ピンク',
+    'staff' => 'ブルー',
   ];
   $cur = current_ui_theme();
 
@@ -63,6 +84,16 @@ function render_user_menu_html(): string {
   $initial = 'U';
   if ($who !== '') {
     $initial = mb_substr($who, 0, 1);
+  }
+
+  $storeId = function_exists('current_store_id') ? (int)(current_store_id() ?? 0) : (int)($_SESSION['store_id'] ?? 0);
+  $csrf = '';
+  if (function_exists('csrf_token')) {
+    $csrf = (string)csrf_token();
+  } else {
+    if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+    if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(16));
+    $csrf = (string)$_SESSION['csrf_token'];
   }
 
   ob_start();
@@ -79,7 +110,7 @@ function render_user_menu_html(): string {
 
     <div class="userMenu__panel" id="userMenuPanel" role="menu" hidden>
       <?php if ($isAdmin): ?>
-        <a class="userMenu__item" href="/seika-app/public/admin/users/index.php" role="menuitem">👤 ユーザー管理</a>
+        <a class="userMenu__item" href="/wbss/public/admin/users/index.php" role="menuitem">👤 ユーザー管理</a>
         <div class="userMenu__sep"></div>
       <?php endif; ?>
 
@@ -97,78 +128,28 @@ function render_user_menu_html(): string {
 
       <div class="userMenu__sep"></div>
 
-      <a class="userMenu__item danger" href="/seika-app/public/logout.php" role="menuitem">🚪 ログアウト</a>
+      <div
+        class="userMenu__push"
+        data-push-ui
+        data-store-id="<?= (int)$storeId ?>"
+        data-csrf="<?= h($csrf) ?>"
+        data-unread-count="0"
+      >
+        <div class="userMenu__label">🔔 通知</div>
+        <div class="userMenu__pushRow">
+          <div class="userMenu__pushStatus" data-push-status>状態を確認中…</div>
+          <div class="userMenu__pushActions">
+            <button type="button" class="userMenu__pushBtn" data-push-enable>ON</button>
+            <button type="button" class="userMenu__pushBtn" data-push-disable hidden>OFF</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="userMenu__sep"></div>
+
+      <a class="userMenu__item danger" href="/wbss/public/logout.php" role="menuitem">🚪 ログアウト</a>
     </div>
   </div>
-
-  <style>
-  .userMenu{ position:relative; display:inline-block; }
-  .userMenu__btn{
-    display:flex; align-items:center; gap:10px;
-    min-height: var(--tap);
-    padding:10px 12px;
-    border-radius:14px;
-    border:1px solid var(--line);
-    background: var(--cardA);
-    color: var(--txt);
-    cursor:pointer;
-    user-select:none;
-  }
-  .userMenu__avatar{
-    width:34px; height:34px; border-radius:999px;
-    display:flex; align-items:center; justify-content:center;
-    font-weight:1000;
-    background: color-mix(in srgb, var(--accent) 25%, transparent);
-    border:1px solid var(--line);
-  }
-  .userMenu__who{ display:flex; flex-direction:column; line-height:1.1; text-align:left; }
-  .userMenu__name{ font-weight:1000; font-size:13px; }
-  .userMenu__role{ font-size:11px; color:var(--muted); }
-  .userMenu__chev{ color:var(--muted); font-weight:900; }
-
-  .userMenu__panel{
-    position:absolute; right:0; top: calc(100% + 8px);
-    min-width: 280px;
-    border-radius: 16px;
-    border:1px solid var(--line);
-    background: linear-gradient(180deg, var(--cardA), var(--cardB));
-    box-shadow: var(--shadow);
-    padding: 10px;
-    z-index: 999;
-  }
-  .userMenu__item{
-    display:block;
-    padding: 12px 12px;
-    border-radius: 12px;
-    border:1px solid transparent;
-  }
-  .userMenu__item:hover{ border-color: var(--line); filter: brightness(1.05); }
-  .userMenu__item.danger{ color: var(--ng); font-weight: 1000; }
-
-  .userMenu__sep{ height:1px; background: var(--line); margin: 10px 0; }
-
-  .userMenu__label{ font-size:12px; color:var(--muted); font-weight:900; margin: 4px 2px 8px; }
-  .userMenu__grid{ display:grid; grid-template-columns: 1fr; gap:8px; }
-  .userMenu__themeBtn{
-    width:100%;
-    text-align:left;
-    padding: 12px 12px;
-    border-radius: 12px;
-    border:1px solid var(--line);
-    background: rgba(255,255,255,.02);
-    color: var(--txt);
-    cursor:pointer;
-    font-weight:900;
-  }
-  .userMenu__themeBtn.on{
-    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-  }
-
-  [data-theme="light"] .userMenu__btn{ background:#fff; box-shadow: 0 10px 18px rgba(0,0,0,.06); border:1px solid var(--line); }
-  [data-theme="light"] .userMenu__panel{ background:#fff; box-shadow: 0 10px 18px rgba(0,0,0,.10); }
-  [data-theme="light"] .userMenu__themeBtn{ background:#fff; box-shadow: 0 10px 18px rgba(0,0,0,.06); border:1px solid var(--line); }
-  </style>
 
   <script>
 (function(){
@@ -196,7 +177,7 @@ function render_user_menu_html(): string {
 
   window.setTheme = async function(theme){
     try{
-      const res = await fetch('/seika-app/public/api/set_theme.php', {
+      const res = await fetch('/wbss/public/api/set_theme.php', {
         method:'POST',
         headers:{'Content-Type':'application/x-www-form-urlencoded'},
         credentials:'same-origin',
@@ -224,7 +205,7 @@ function render_user_menu_html(): string {
 }
 /** 共通ヘッダ */
 function render_header(string $title, array $opts = []): void {
-  $back_href  = array_key_exists('back_href', $opts) ? $opts['back_href'] : '/seika-app/public/dashboard.php';
+  $back_href  = array_key_exists('back_href', $opts) ? $opts['back_href'] : '/wbss/public/dashboard.php';
   $back_label = (string)($opts['back_label'] ?? '← 戻る');
   $right_html = (string)($opts['right_html'] ?? '');
   $show_store = (bool)($opts['show_store'] ?? true);
@@ -245,26 +226,35 @@ function render_header(string $title, array $opts = []): void {
   ?>
   <header class="app-header">
     <div class="app-header__inner">
-      <div class="app-header__left">
+      <div class="app-header__start">
         <?php if ($back_href !== null && $back_href !== ''): ?>
-          <a class="app-back" href="<?= h((string)$back_href) ?>"><?= h($back_label) ?></a>
+          <a class="app-back" href="<?= h((string)$back_href) ?>">
+            <span class="app-back__icon">←</span>
+            <span class="app-back__label"><?= h(preg_replace('/^←\s*/u', '', $back_label) ?? $back_label) ?></span>
+          </a>
         <?php endif; ?>
       </div>
 
-      <div class="app-header__center">
-        <div class="app-title"><?= h($title) ?></div>
-        <div class="app-sub">
+      <div class="app-header__main">
+        <div class="app-titleRow">
+          <div class="app-title"><?= h($title) ?></div>
+        </div>
+        <div class="app-sub" aria-label="ページ情報">
           <?php if ($show_store): ?>
-            <span class="pill">店舗: <?= h($store_name !== '' ? $store_name : '未選択') ?><?= $store_id !== null ? ' (#'.(int)$store_id.')' : '' ?></span>
+            <span class="pill"><span class="pill__label">店舗</span><span class="pill__value"><?= h($store_name !== '' ? $store_name : '未選択') ?><?= $store_id !== null ? ' (#'.(int)$store_id.')' : '' ?></span></span>
           <?php endif; ?>
           <?php if ($show_user): ?>
-            <span class="pill">ユーザー: <?= h($who !== '' ? $who : '-') ?><?= $role !== '' ? ' / '.h($role) : '' ?></span>
+            <span class="pill"><span class="pill__label">ユーザー</span><span class="pill__value"><?= h($who !== '' ? $who : '-') ?><?= $role !== '' ? ' / '.h($role) : '' ?></span></span>
           <?php endif; ?>
         </div>
       </div>
 
-      <div class="app-header__right" style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
-        <?= $right_html ?>
+      <div class="app-header__end">
+        <?php if ($right_html !== ''): ?>
+          <div class="app-actions">
+            <?= $right_html ?>
+          </div>
+        <?php endif; ?>
         <?= render_user_menu_html() ?>
       </div>
     </div>
@@ -275,388 +265,7 @@ function render_header(string $title, array $opts = []): void {
 /** 共通CSS（テーマ変数方式） */
 function render_layout_css(): void {
   ?>
-  <style>
-    :root{
-      --tap: 52px;
-      --radius: 18px;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
-    }
-
-    /* =========================
-       Theme variables (body[data-theme="..."])
-       ========================= */
-
-    /* ===== default: dark ===== */
-    body[data-theme="dark"]{
-      --bg1:#0b1220;
-      --bg2:#0f172a;
-      --txt:#e8eefc;
-      --muted:#a8b4d6;
-      --line:rgba(255,255,255,.12);
-
-      --cardA: rgba(255,255,255,.06);
-      --cardB: rgba(255,255,255,.03);
-
-      --accent:#60a5fa;
-      --ok:#34d399;
-      --warn:#fbbf24;
-      --ng:#fb7185;
-
-      /* 便利 */
-      --primary:#111827;
-    }
-
-    /* ===== light (iPad現場CSS寄せ) ===== */
-    body[data-theme="light"]{
-      --bg1:#f4f6fb;
-      --bg2:#f4f6fb;
-      --txt:#0f1222;
-      --muted:#6b7280;
-      --line:#e7e9f2;
-
-      --cardA:#ffffff;
-      --cardB:#fbfbff;
-
-      --accent:#2563eb;
-      --ok:#16a34a;
-      --warn:#f59e0b;
-      --ng:#dc2626;
-
-      --radius:18px;
-      --shadow:0 10px 30px rgba(15,18,34,.08);
-
-      --primary:#111827;
-      --blue:#2563eb;
-      --cyan:#0891b2;
-      --green:#16a34a;
-      --yellow:#f59e0b;
-      --orange:#f97316;
-      --red:#dc2626;
-      --purple:#7c3aed;
-
-      --softBlue:#eef4ff;
-      --softGreen:#eaf8ef;
-      --softYellow:#fff6e5;
-      --softRed:#ffecec;
-      --softPurple:#f3edff;
-    }
-
-    /* ===== high contrast ===== */
-    body[data-theme="high_contrast"]{
-      --bg1:#000000;
-      --bg2:#000000;
-      --txt:#ffffff;
-      --muted:#d1d5db;
-      --line:rgba(255,255,255,.35);
-
-      --cardA: rgba(255,255,255,.10);
-      --cardB: rgba(255,255,255,.06);
-
-      --accent:#00e5ff;
-      --ok:#00ff85;
-      --warn:#ffd400;
-      --ng:#ff3b30;
-
-      --primary:#000;
-    }
-
-    /* ===== soft ===== */
-    body[data-theme="soft"]{
-      --bg1:#101826;
-      --bg2:#0b1320;
-      --txt:#e6edf7;
-      --muted:#b7c2d8;
-      --line:rgba(255,255,255,.10);
-
-      --cardA: rgba(255,255,255,.07);
-      --cardB: rgba(255,255,255,.04);
-
-      --accent:#a78bfa;
-      --ok:#34d399;
-      --warn:#fbbf24;
-      --ng:#fb7185;
-
-      --primary:#111827;
-    }
-
-    /* ===== store_color ===== */
-    body[data-theme="store_color"]{
-      --bg1:#0b1220;
-      --bg2:#0f172a;
-      --txt:#e8eefc;
-      --muted:#a8b4d6;
-      --line:rgba(255,255,255,.12);
-
-      --cardA: rgba(255,255,255,.06);
-      --cardB: rgba(255,255,255,.03);
-
-      --accent:#22c55e; /* ひとまず在庫=緑 */
-      --ok:#34d399;
-      --warn:#fbbf24;
-      --ng:#fb7185;
-
-      --primary:#111827;
-    }
-
-    /* =========================
-       Base styles (keep the "good old" dark vibe)
-       ========================= */
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      color:var(--txt);
-      font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;
-
-      /* 以前の “良さ”：ダークはradial + gradient */
-      background:
-        radial-gradient(1200px 600px at 20% -10%, rgba(96,165,250,.18), transparent 55%),
-        radial-gradient(1000px 520px at 90% 10%, rgba(167,139,250,.14), transparent 55%),
-        radial-gradient(900px 520px at 50% 120%, rgba(34,197,94,.10), transparent 55%),
-        linear-gradient(180deg, var(--bg1), var(--bg2));
-      min-height:100vh;
-      -webkit-text-size-adjust: 100%;
-    }
-
-    /* lightは“現場見やすさ最優先”で単色に寄せる */
-    body[data-theme="light"]{
-      background: var(--bg1);
-    }
-
-    a{ color:inherit; text-decoration:none; }
-    .page{ max-width:1100px; margin:0 auto; padding:14px; }
-
-    /* ===== Header ===== */
-    .app-header{
-      position:sticky; top:0; z-index:50;
-      background: rgba(10,16,30,.72);
-      backdrop-filter:saturate(160%) blur(12px);
-      border-bottom:1px solid var(--line);
-    }
-    .app-header__inner{
-      max-width:1100px; margin:0 auto; padding:12px 14px;
-      display:grid; grid-template-columns: 1fr 2fr 1fr; gap:10px; align-items:center;
-    }
-    @media (max-width:820px){
-      .app-header__inner{ grid-template-columns: 1fr; }
-      .app-header__left{ order:1; }
-      .app-header__center{ order:0; }
-      .app-header__right{ order:2; justify-self:start; }
-    }
-    .app-title{ font-size:18px; font-weight:900; letter-spacing:.3px; }
-    .app-sub{ margin-top:6px; display:flex; gap:8px; flex-wrap:wrap; }
-
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      border:1px solid var(--line);
-      background: var(--cardA);
-      color:var(--muted);
-      padding:6px 10px; border-radius:999px; font-size:12px; line-height:1.2;
-    }
-
-    /* ===== Buttons ===== */
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      min-height: var(--tap);
-      padding:10px 14px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background: var(--cardA);
-      color:var(--txt);
-      cursor:pointer;
-      font-size:14px;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn:hover{ filter: brightness(1.05); }
-    .btn:active{ transform: translateY(1px); }
-
-    .btn-primary{
-      border-color:transparent;
-      background: linear-gradient(135deg, rgba(96,165,250,.95), rgba(167,139,250,.85));
-      box-shadow: var(--shadow);
-      color: #fff;
-    }
-
-    .app-back{
-      min-height: var(--tap);
-      display:inline-flex; align-items:center; justify-content:center;
-      padding:10px 14px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background: var(--cardA);
-      font-size:14px;
-    }
-
-    /* ===== Cards ===== */
-    .card{
-      border:1px solid var(--line);
-      border-radius: var(--radius);
-      background: linear-gradient(180deg, var(--cardA), var(--cardB));
-      box-shadow: var(--shadow);
-      padding:14px;
-    }
-    .muted{ color:var(--muted); font-size:12px; }
-
-    /* =========================
-       light theme overrides (効くように body[data-theme="light"] に統一)
-       ========================= */
-    body[data-theme="light"] .app-header{
-      padding: 10px 0 12px;
-      background: linear-gradient(180deg, rgba(244,246,251,.98), rgba(244,246,251,.90));
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--line);
-    }
-
-    body[data-theme="light"] .app-back{
-      background:#fff;
-      border:1px solid var(--line);
-      box-shadow: 0 10px 18px rgba(0,0,0,.06);
-    }
-
-    body[data-theme="light"] .pill{
-      background:#fff;
-      border:1px solid var(--line);
-      color: var(--muted);
-      font-weight: 900;
-    }
-
-    body[data-theme="light"] .card{
-      background: #fff;
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow);
-      border-radius: var(--radius);
-    }
-
-    /* ボタン：あなたの iPad CSS の btn 風 */
-    body[data-theme="light"] .btn,
-    body[data-theme="light"] .btnSmall{
-      border: none;
-      border-radius: 16px;
-      min-height: 58px;
-      padding: 14px 14px;
-      font-size: 16px;
-      font-weight: 1000;
-      box-shadow: 0 10px 18px rgba(0,0,0,.08);
-      background: #fff;
-      color: var(--txt);
-    }
-
-    /* 色ボタン互換（必要なら使える） */
-    body[data-theme="light"] .b-dark{ background: var(--primary); color:#fff; }
-    body[data-theme="light"] .b-blue{ background: var(--blue); color:#fff; }
-    body[data-theme="light"] .b-cyan{ background: var(--cyan); color:#fff; }
-    body[data-theme="light"] .b-green{ background: var(--green); color:#fff; }
-    body[data-theme="light"] .b-yellow{ background: var(--yellow); color:#111; }
-    body[data-theme="light"] .b-orange{ background: var(--orange); color:#111; }
-    body[data-theme="light"] .b-red{ background: var(--red); color:#fff; }
-    body[data-theme="light"] .b-purple{ background: var(--purple); color:#fff; }
-
-    body[data-theme="light"] input,
-    body[data-theme="light"] select{
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: #fff;
-      padding: 14px 12px;
-      min-height: 58px;
-      font-size: 16px;
-      font-weight: 800;
-      outline:none;
-    }
-    body[data-theme="light"] input:focus,
-    body[data-theme="light"] select:focus{
-      border-color: rgba(37,99,235,.55);
-      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
-    }
-    .prodCard{
-      cursor: pointer;
-      pointer-events: auto;
-    }
-    .prodCard *{
-      pointer-events: none; /* 中の要素がクリックを奪って死ぬ事故を防ぐ */
-    }
-    /* ===== スマホ最適化（PCは一切影響なし） ===== */
-@media (max-width: 640px) {
-
-  table thead {
-    display: none;
-  }
-
-  table tbody tr {
-    display: block;
-    margin-bottom: 14px;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 10px;
-    background: #fff;
-  }
-
-  table tbody td {
-    display: block;
-    padding: 6px 4px;
-    border: none;
-    text-align: left !important;
-  }
-
-  /* 商品名 */
-  table tbody td:first-child {
-    font-weight: 900;
-    font-size: 15px;
-    margin-bottom: 6px;
-  }
-
-  /* 種別・数量 */
-  table tbody td:nth-child(2),
-  table tbody td:nth-child(4) {
-    display: inline-block;
-    margin-right: 8px;
-  }
-
-  /* カテゴリ・バーコードは省略気味 */
-  table tbody td:nth-child(3),
-  table tbody td:nth-child(6) {
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  /* 「この商品を入出庫」ボタン */
-  table tbody td a.btn {
-    display: block;
-    margin-top: 8px;
-    text-align: center;
-  }
-}
-@media (max-width:640px){
-  .qty-badge{
-    font-size:18px;
-    font-weight:900;
-  }
-}
-.barcode-detail summary {
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--accent);
-  user-select: none;
-}
-
-.barcode-detail summary::marker {
-  display: none;
-}
-
-.barcode-detail summary:before {
-  content: "▶ ";
-}
-
-.barcode-detail[open] summary:before {
-  content: "▼ ";
-}
-
-.barcode-value {
-  margin-top: 6px;
-  font-size: 13px;
-  word-break: break-all;
-  color: var(--txt);
-}
-  </style>
+  <link rel="stylesheet" href="/wbss/public/assets/css/style.css?v=20260317a">
   <?php
 }
 
@@ -672,14 +281,14 @@ function render_page_start(string $title): void {
     <title><?= h($title) ?></title>
 
     <!-- PWA -->
-    <link rel="manifest" href="/seika-app/public/manifest.webmanifest">
+    <link rel="manifest" href="/wbss/public/manifest.webmanifest">
     <meta name="theme-color" content="#0b1220">
 
     <!-- iOS PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Seika">
-    <link rel="apple-touch-icon" href="/seika-app/public/assets/icon-192.png">
+    <meta name="apple-mobile-web-app-title" content="WBSS">
+    <link rel="apple-touch-icon" href="/wbss/public/assets/apple-touch-icon.png?v=3">
 
     <?php render_layout_css(); ?>
   </head>
@@ -690,12 +299,110 @@ function render_page_start(string $title): void {
 /** ページ終了 */
 function render_page_end(): void {
   ?>
+  <style>
+  .pwa-refresh-indicator{
+    position:fixed;
+    top:10px;
+    left:50%;
+    transform:translate(-50%, -10px);
+    z-index:9999;
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(15,23,42,.88);
+    color:#fff;
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.01em;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .16s ease, transform .16s ease;
+    box-shadow:0 10px 24px rgba(0,0,0,.18);
+  }
+  .pwa-refresh-indicator.is-visible{
+    opacity:1;
+    transform:translate(-50%, 0);
+  }
+  .pwa-refresh-indicator.is-ready{
+    background:rgba(37,99,235,.92);
+  }
+  </style>
   <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/seika-app/public/sw.js").catch(()=>{});
+      navigator.serviceWorker.register("/wbss/public/sw.js").catch(()=>{});
     });
   }
+
+  (function(){
+    const isStandalone = (() => {
+      const mq = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+      const iosStandalone = typeof navigator !== 'undefined' && 'standalone' in navigator && !!navigator.standalone;
+      return !!(mq || iosStandalone);
+    })();
+    if (!isStandalone || !('ontouchstart' in window)) return;
+
+    const indicator = document.createElement('div');
+    indicator.className = 'pwa-refresh-indicator';
+    indicator.textContent = '下に引っ張って更新';
+    document.body.appendChild(indicator);
+
+    let startY = 0;
+    let pulling = false;
+    let ready = false;
+    const threshold = 88;
+
+    function resetIndicator(){
+      indicator.classList.remove('is-visible', 'is-ready');
+      indicator.textContent = '下に引っ張って更新';
+      ready = false;
+    }
+
+    window.addEventListener('touchstart', function(e){
+      if (!e.touches || e.touches.length !== 1) return;
+      if ((window.scrollY || document.documentElement.scrollTop || 0) > 0) return;
+      startY = e.touches[0].clientY;
+      pulling = true;
+      ready = false;
+    }, { passive: true });
+
+    window.addEventListener('touchmove', function(e){
+      if (!pulling || !e.touches || e.touches.length !== 1) return;
+      const deltaY = e.touches[0].clientY - startY;
+      if (deltaY <= 8) {
+        resetIndicator();
+        return;
+      }
+      indicator.classList.add('is-visible');
+      if (deltaY >= threshold) {
+        ready = true;
+        indicator.classList.add('is-ready');
+        indicator.textContent = '離すと更新します';
+      } else {
+        ready = false;
+        indicator.classList.remove('is-ready');
+        indicator.textContent = '下に引っ張って更新';
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', function(){
+      if (!pulling) return;
+      pulling = false;
+      if (ready) {
+        indicator.classList.add('is-ready');
+        indicator.classList.add('is-visible');
+        indicator.textContent = '更新中…';
+        window.location.reload();
+        return;
+      }
+      resetIndicator();
+    }, { passive: true });
+
+    window.addEventListener('touchcancel', function(){
+      pulling = false;
+      resetIndicator();
+    }, { passive: true });
+  })();
   </script>
   </body>
   </html>

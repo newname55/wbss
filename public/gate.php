@@ -57,7 +57,7 @@ function set_current_store(PDO $pdo, int $userId): void {
 
   // 複数あるなら選択画面へ
   if (count($ids) >= 2) {
-    header('Location: /seika-app/public/store_select.php');
+    header('Location: /wbss/public/store_select.php');
     exit;
   }
 
@@ -78,7 +78,7 @@ function set_current_store(PDO $pdo, int $userId): void {
 try {
   $userId = current_user_id();
   set_current_store($pdo, $userId);
-  header('Location: /seika-app/public/dashboard.php');
+  header('Location: /wbss/public/dashboard.php');
   exit;
 } catch (Throwable $e) {
   http_response_code(400);

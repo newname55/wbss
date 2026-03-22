@@ -1,0 +1,60 @@
+Project: wbss
+
+This project is a PHP + MariaDB web application.
+
+Architecture
+- public/ contains HTTP entrypoints
+- public/api/ contains ajax endpoints
+- app/ contains domain logic and shared services
+- Database is MariaDB
+
+General Rules
+- Never break existing API responses unless explicitly requested.
+- Preserve existing function signatures when refactoring.
+- Prefer minimal diff changes.
+- Avoid large rewrites of working code.
+- Keep backward compatibility.
+
+Database
+- Database: MariaDB
+- Do not modify database schema unless explicitly requested.
+- Use existing table structures.
+- Avoid destructive queries.
+
+PHP Coding Rules
+- PHP 8+
+- declare(strict_types=1) when appropriate
+- use require_once for includes
+- avoid global state changes unless necessary
+
+Architecture Rules
+- Business logic should live in app/ modules.
+- API files should be thin controllers.
+- Avoid duplicating business logic across endpoints.
+- Prefer centralizing domain logic in app/ modules.
+
+Safety Rules
+- Be careful with attendance logic and date calculations.
+- Do not change business_date logic without explicit instruction.
+- Do not change store_id resolution logic without explicit instruction.
+
+Refactoring
+- Always explain the impact before changing shared functions.
+- Suggest changes in small incremental steps.
+
+Output Rules
+- Prefer unified diff when suggesting changes.
+- Avoid modifying unrelated files.
+
+Domain Rules
+
+Attendance module is critical.
+Files involved:
+- app/attendance.php
+- public/api/attendance_*.php
+- public/attendance/*.php
+
+Rules:
+- Do not modify attendance database writes without explicit instruction.
+- business_date calculations must remain consistent.
+- store_id resolution must not change silently.
