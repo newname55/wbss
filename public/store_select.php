@@ -20,16 +20,8 @@ $isSuper = has_role('super_user');
 $isAdmin = has_role('admin');
 $isMgr   = has_role('manager');
 
-$returnTo = (string)($_GET['return'] ?? '/wbss/public/dashboard.php');
-if ($returnTo === '' || $returnTo[0] !== '/') {
-  $returnTo = '/wbss/public/dashboard.php';
-}
-if (preg_match('/^\/{2,}/', $returnTo)) {
-  $returnTo = '/wbss/public/dashboard.php';
-}
-if (strpos($returnTo, '/wbss/public/') !== 0) {
-  $returnTo = '/wbss/public/dashboard.php';
-}
+$returnRaw = (string)($_GET['return'] ?? $_GET['next'] ?? '/wbss/public/dashboard.php');
+$returnTo = normalize_internal_wbss_path($returnRaw, '/wbss/public/dashboard.php');
 
 $stores = [];
 if ($isSuper || $isAdmin) {

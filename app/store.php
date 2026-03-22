@@ -17,6 +17,48 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 
 const STORE_SESSION_KEY = '__store_id';
 
+function normalize_internal_wbss_path(string $path, string $default = '/wbss/public/dashboard.php'): string {
+  $value = trim($path);
+  if ($value === '') {
+    return $default;
+  }
+
+  if (preg_match('#^https?://#i', $value)) {
+    $parts = parse_url($value);
+    if (!is_array($parts)) {
+      return $default;
+    }
+    $value = (string)($parts['path'] ?? '');
+    if ($value === '') {
+      return $default;
+    }
+    if (isset($parts['query']) && $parts['query'] !== '') {
+      $value .= '?' . $parts['query'];
+    }
+    if (isset($parts['fragment']) && $parts['fragment'] !== '') {
+      $value .= '#' . $parts['fragment'];
+    }
+  }
+
+  if (preg_match('/^\/{2,}/', $value)) {
+    return $default;
+  }
+
+  if ($value[0] !== '/') {
+    $value = '/' . ltrim($value, '/');
+  }
+
+  if (str_starts_with($value, '/seika-app/public/')) {
+    $value = '/wbss/public/' . ltrim(substr($value, strlen('/seika-app/public/')), '/');
+  }
+
+  if (!str_starts_with($value, '/wbss/public/')) {
+    return $default;
+  }
+
+  return $value;
+}
+
 function set_current_store_id(int $storeId): void {
   if ($storeId <= 0) {
     unset($_SESSION[STORE_SESSION_KEY]);
@@ -42,7 +84,7 @@ function require_store_selected_for_super(bool $isSuper, string $returnTo): void
   if (!$isSuper) return;
   if (get_current_store_id() > 0) return;
 
-  $ret = $returnTo !== '' ? $returnTo : '/wbss/public/dashboard.php';
+  $ret = normalize_internal_wbss_path($returnTo, '/wbss/public/dashboard.php');
   header('Location: /wbss/public/store_select.php?return=' . rawurlencode($ret));
   exit;
 }
@@ -55,7 +97,7 @@ function require_store_selected(string $returnTo): int {
   $sid = get_current_store_id();
   if ($sid > 0) return $sid;
 
-  $ret = $returnTo !== '' ? $returnTo : '/wbss/public/dashboard.php';
+  $ret = normalize_internal_wbss_path($returnTo, '/wbss/public/dashboard.php');
   header('Location: /wbss/public/store_select.php?return=' . rawurlencode($ret));
   exit;
 }

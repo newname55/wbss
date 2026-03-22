@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../app/auth.php';
 require_once __DIR__ . '/../app/db.php';
+require_once __DIR__ . '/../app/store.php';
 
 ensure_session();
 
@@ -107,7 +108,7 @@ if ($nonce === '' || $cookieNonce === '' || !hash_equals($cookieNonce, $nonce)) 
 
 $mode   = (string)($st['mode'] ?? 'login');  // login/link
 $target = (int)($st['target'] ?? 0);
-$ret    = (string)($st['ret'] ?? '/wbss/public/gate.php');
+$ret    = normalize_internal_wbss_path((string)($st['ret'] ?? '/wbss/public/gate.php'), '/wbss/public/gate.php');
 
 $pdo = db();
 

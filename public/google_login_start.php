@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../app/auth.php';
+require_once __DIR__ . '/../app/store.php';
 ensure_session();
 
 function conf(string $key): string {
@@ -81,6 +82,7 @@ if ($return === '') {
     ? ('/wbss/public/admin_users.php?id=' . $target . '#edit')
     : '/wbss/public/gate.php';
 }
+$return = normalize_internal_wbss_path($return, '/wbss/public/gate.php');
 
 // stateに全部入れて署名（セッション消えても復元可能）
 $nonce = bin2hex(random_bytes(16));
