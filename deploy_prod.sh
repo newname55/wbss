@@ -11,8 +11,7 @@ ENV_FILE="/var/www/.wbss_env"
 LINE_TOKEN="${LINE_DEPLOY_TOKEN:-}"
 LINE_USER="${LINE_DEPLOY_USER:-}"
 CRON_SECRET_VALUE="${CRON_SECRET:-}"
-
-APP_BASE_URL="${APP_BASE_URL:-https://haruto.asuscomm.com/wbss/public}"
+APP_BASE_URL="${APP_BASE_URL:-https://haruto.asuscomm.com/wbss}"
 
 send_line() {
   local msg="$1"
@@ -66,64 +65,52 @@ log_deploy() {
 START="$(date '+%Y-%m-%d %H:%M:%S')"
 HOSTNAME_SHORT="$(hostname)"
 EXECUTED_BY="$(whoami)"
+BEFORE_MAIN="$(git log --oneline -1 2>/dev/null || echo 'unknown')"
 
-BEFORE_R4="$(git log --oneline -1 2>/dev/null || echo 'unknown')"
-AFTER_R4=""
-R4_STATUS=0
-R5_STATUS=0
-R5_RESULT=""
-
-echo "===== RASPI4 DEPLOY (dev) ====="
-date
-git reset --hard HEAD || R4_STATUS=$?
-git pull origin dev || R4_STATUS=$?
-
-AFTER_R4="$(git log --oneline -1 2>/dev/null || echo 'unknown')"
+MAIN_STATUS=0
 
 echo "===== RASPI5 DEPLOY (main) ====="
-R5_RESULT="$(ssh raspi5-deploy 'cd /var/www/html/wbss && ./deploy_prod.sh' 2>&1)" || R5_STATUS=$?
+date
 
+git checkout main || MAIN_STATUS=$?
+git fetch origin || MAIN_STATUS=$?
+git reset --hard origin/main || MAIN_STATUS=$?
+
+AFTER_MAIN="$(git log --oneline -1 2>/dev/null || echo 'unknown')"
 END="$(date '+%Y-%m-%d %H:%M:%S')"
 
-if [ "$R4_STATUS" -eq 0 ] && [ "$R5_STATUS" -eq 0 ]; then
-  if [ "$BEFORE_R4" = "$AFTER_R4" ]; then
-    MSG="ℹ️ WBSS deploy完了（更新なし）
+if [ "$MAIN_STATUS" -eq 0 ]; then
+  if [ "$BEFORE_MAIN" = "$AFTER_MAIN" ]; then
+    MSG="ℹ️ WBSS 本番deploy完了（更新なし）
 host: $HOSTNAME_SHORT
 by: $EXECUTED_BY
 start: $START
 end: $END
-raspi4(dev): $AFTER_R4
-raspi5(main): OK
+main: $AFTER_MAIN
 ${APP_BASE_URL}/"
 
-    log_deploy "dev_to_main" "dev/main" "$BEFORE_R4" "$AFTER_R4" "success" "更新なし / raspi5(main) 同期成功"
+    log_deploy "prod" "main" "$BEFORE_MAIN" "$AFTER_MAIN" "success" "更新なし / raspi5(main) 同期成功"
   else
-    MSG="✅ WBSS deploy成功
+    MSG="✅ WBSS 本番deploy成功
 host: $HOSTNAME_SHORT
 by: $EXECUTED_BY
 start: $START
 end: $END
-raspi4(dev): $AFTER_R4
-raspi5(main): OK
+before: $BEFORE_MAIN
+after: $AFTER_MAIN
 ${APP_BASE_URL}/"
 
-    log_deploy "dev_to_main" "dev/main" "$BEFORE_R4" "$AFTER_R4" "success" "raspi4(dev) 更新・raspi5(main) 同期成功"
+    log_deploy "prod" "main" "$BEFORE_MAIN" "$AFTER_MAIN" "success" "raspi5(main) 同期成功"
   fi
 else
-  DETAIL="raspi4_status=$R4_STATUS / raspi5_status=$R5_STATUS"
-  if [ -n "$R5_RESULT" ]; then
-    DETAIL="$DETAIL / raspi5_log=$(printf '%s' "$R5_RESULT" | tail -n 5 | tr '\n' ' ')"
-  fi
-
-  MSG="❌ WBSS deploy失敗
+  MSG="❌ WBSS 本番deploy失敗
 host: $HOSTNAME_SHORT
 by: $EXECUTED_BY
 start: $START
 end: $END
-raspi4_status: $R4_STATUS
-raspi5_status: $R5_STATUS"
+main_status: $MAIN_STATUS"
 
-  log_deploy "dev_to_main" "dev/main" "$BEFORE_R4" "$AFTER_R4" "failed" "$DETAIL"
+  log_deploy "prod" "main" "$BEFORE_MAIN" "$AFTER_MAIN" "failed" "raspi5(main) deploy失敗 / status=$MAIN_STATUS"
 fi
 
 send_line "$MSG"
