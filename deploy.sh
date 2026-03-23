@@ -1,11 +1,9 @@
 #!/bin/bash
 
-# ===== 安定設定 =====
 set +u
 
 cd /var/www/html/wbss || exit 1
 
-# ===== 環境変数 =====
 ENV_FILE="/var/www/.wbss_env"
 if [ -f "$ENV_FILE" ]; then
   source "$ENV_FILE"
@@ -18,7 +16,6 @@ LINE_USER="${LINE_DEPLOY_USER:-}"
 CRON_SECRET_VALUE="${CRON_SECRET:-}"
 APP_BASE_URL="${APP_BASE_URL:-https://haruto.asuscomm.com/wbss}"
 
-# ===== 基本情報 =====
 START="$(date '+%Y-%m-%d %H:%M:%S')"
 END=""
 HOSTNAME_SHORT="$(hostname)"
@@ -28,7 +25,6 @@ BEFORE_R4="$(git log --oneline -1 2>/dev/null || echo 'unknown')"
 AFTER_R4=""
 R4_STATUS=0
 
-# ===== LINE送信 =====
 send_line() {
   local msg="$1"
 
@@ -53,7 +49,6 @@ PY
     -d "$json" >/dev/null
 }
 
-# ===== deployログ保存 =====
 log_deploy() {
   local env_name="$1"
   local branch_name="$2"
@@ -79,7 +74,6 @@ log_deploy() {
     --data-urlencode "detail_text=${detail}" >/dev/null
 }
 
-# ===== DEPLOY開始 =====
 echo "===== RASPI4 DEPLOY (dev) ====="
 date
 
@@ -88,12 +82,9 @@ git fetch origin dev || R4_STATUS=$?
 git reset --hard origin/dev || R4_STATUS=$?
 
 AFTER_R4="$(git log --oneline -1 2>/dev/null || echo 'unknown')"
-
 END="$(date '+%Y-%m-%d %H:%M:%S')"
 
-# ===== 判定 =====
 if [ "$R4_STATUS" -eq 0 ]; then
-
   if [ "$BEFORE_R4" = "$AFTER_R4" ]; then
     MSG="ℹ️ WBSS dev deploy（更新なし）
 host: $HOSTNAME_SHORT
@@ -116,7 +107,6 @@ ${APP_BASE_URL}/"
 
     log_deploy "dev" "dev" "$BEFORE_R4" "$AFTER_R4" "success" "更新あり"
   fi
-
 else
   MSG="❌ WBSS dev deploy失敗
 host: $HOSTNAME_SHORT
@@ -128,7 +118,6 @@ status: $R4_STATUS"
   log_deploy "dev" "dev" "$BEFORE_R4" "$AFTER_R4" "failed" "gitエラー"
 fi
 
-# ===== LINE送信 =====
 send_line "$MSG"
 
 echo "===== DONE ====="
