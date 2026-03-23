@@ -971,12 +971,14 @@ render_page_start('ダッシュボード');
   background:rgba(255,255,255,.04);
   color:var(--txt);
   border-radius:999px;
-  min-height:34px;
+  min-height:32px;
   padding:0 12px;
   font-size:12px;
   font-weight:900;
   line-height:1;
   cursor:pointer;
+  flex:0 0 auto;
+  white-space:nowrap;
 }
 
 .store-switch-toggle:hover{
@@ -1909,6 +1911,12 @@ render_page_start('ダッシュボード');
   .store-switch-select{
     min-height:40px;
     font-size:13px;
+  }
+
+  .store-switch-toggle{
+    min-height:30px;
+    padding:0 10px;
+    font-size:11px;
   }
 
   .dashboard-user-menu{
