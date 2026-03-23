@@ -81,7 +81,7 @@ git pull origin dev || R4_STATUS=$?
 AFTER_R4="$(git log --oneline -1 2>/dev/null || echo 'unknown')"
 
 echo "===== RASPI5 DEPLOY (main) ====="
-R5_RESULT="$(ssh raspi5-deploy 'cd /var/www/html/wbss && git checkout main && git fetch origin && git reset --hard origin/main && git log --oneline -1' 2>&1)" || R5_STATUS=$?
+R5_RESULT="$(ssh raspi5-deploy 'cd /var/www/html/wbss && ./deploy_prod.sh' 2>&1)" || R5_STATUS=$?
 
 END="$(date '+%Y-%m-%d %H:%M:%S')"
 
