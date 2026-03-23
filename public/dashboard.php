@@ -1884,7 +1884,7 @@ render_page_start('ダッシュボード');
   }
 
   .dashboard-hero-tools{
-    grid-template-columns:minmax(0, 1fr) 96px;
+    grid-template-columns:minmax(0, .56fr) minmax(132px, 1.44fr);
     gap:7px;
   }
 
@@ -1936,7 +1936,7 @@ render_page_start('ダッシュボード');
 
   .dashboard-user-menu__summary{
     display:grid;
-    grid-template-columns:32px minmax(0, 1fr) 28px;
+    grid-template-columns:32px minmax(72px, 1fr) 28px;
     gap:8px;
     align-items:center;
   }
