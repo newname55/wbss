@@ -109,7 +109,13 @@ if (!function_exists('deploy_run_prod_ssh')) {
     $target = deploy_prod_ssh_target();
     $escaped = array_map(static fn(string $part): string => escapeshellarg($part), $argv);
     $remoteCommand = implode(' ', $escaped);
-    return deploy_run_command(['ssh', $target, '--', $remoteCommand]);
+    return deploy_run_command([
+  'ssh',
+  '-F', '/var/www/.ssh/config',
+  $target,
+  '--',
+  $remoteCommand
+]);
   }
 }
 
