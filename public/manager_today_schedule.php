@@ -1605,6 +1605,9 @@ render_header('本日の勤務予定', [
   background:#f8fafc;
   border-bottom: 1px solid rgba(15,23,42,.08);
 }
+.weekRow[hidden]{
+  display:none !important;
+}
 .weekCell{
   padding-top: 0;
 }
