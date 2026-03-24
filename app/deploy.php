@@ -232,3 +232,32 @@ if (!function_exists('deploy_find_eligible_rollback_target')) {
     return null;
   }
 }
+
+if (!function_exists('deploy_github_compare_repo')) {
+  function deploy_github_compare_repo(): string {
+    $repo = trim((string)conf('WBSS_GITHUB_COMPARE_REPO'));
+    if ($repo === '') {
+      return '';
+    }
+    if (!preg_match('/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/', $repo)) {
+      return '';
+    }
+    return $repo;
+  }
+}
+
+if (!function_exists('deploy_github_compare_url')) {
+  function deploy_github_compare_url(?string $beforeCommit, ?string $afterCommit): string {
+    $repo = deploy_github_compare_repo();
+    $beforeHash = deploy_extract_commit_hash($beforeCommit);
+    $afterHash = deploy_extract_commit_hash($afterCommit);
+
+    if ($repo === '' || $beforeHash === '' || $afterHash === '' || deploy_hash_matches($beforeHash, $afterHash)) {
+      return '';
+    }
+
+    [$owner, $name] = explode('/', $repo, 2);
+    return 'https://github.com/' . rawurlencode($owner) . '/' . rawurlencode($name)
+      . '/compare/' . rawurlencode($beforeHash) . '...' . rawurlencode($afterHash);
+  }
+}
