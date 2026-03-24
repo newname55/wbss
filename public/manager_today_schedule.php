@@ -781,7 +781,7 @@ render_header('本日の勤務予定', [
         <div class="boardSummary">
           <div class="boardSummary__item is-attention">要対応 <?= (int)$attentionCount ?>名</div>
           <div class="boardSummary__item">返信あり <?= (int)$replyCount ?>名</div>
-          <div class="boardSummary__item">出勤確定待ち <?= (int)$confirmPendingCount ?>名</div>
+          <div class="boardSummary__item">出勤確定 <?= (int)$confirmPendingCount ?>名</div>
         </div>
         <div class="boardToolbar__actions">
           <form class="boardSearch" id="castSearchForm">
@@ -794,7 +794,7 @@ render_header('本日の勤務予定', [
       <div class="boardFilters" id="boardFilters">
         <button type="button" class="boardFilter is-active" data-toolbar-filter="all">全員</button>
         <button type="button" class="boardFilter is-attention" data-toolbar-filter="attention">要対応</button>
-        <button type="button" class="boardFilter" data-toolbar-filter="confirm_pending">出勤確定待ち</button>
+        <button type="button" class="boardFilter" data-toolbar-filter="confirm_pending">出勤確定</button>
         <button type="button" class="boardFilter" data-toolbar-filter="replied">返信あり</button>
         <button type="button" class="boardFilter" data-toolbar-filter="in">出勤中</button>
         <button type="button" class="boardFilter" data-toolbar-filter="late">遅刻</button>
