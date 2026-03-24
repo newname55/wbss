@@ -819,6 +819,54 @@ render_header('本日の勤務予定', [
       </div>
     <?php endif; ?>
 
+    <div class="card mobileSimpleBoard" aria-label="キャスト簡易一覧">
+      <div class="sectionHead">
+        <div>
+          <div class="cardTitle">簡易一覧</div>
+          <div class="muted">スマホでは状態・店番・名前だけを先に一覧できます。</div>
+        </div>
+      </div>
+      <div class="mobileSimpleGrid">
+        <?php foreach ($rows as $r):
+          $uid  = (int)$r['user_id'];
+          $name = (string)$r['display_name'];
+          $shopTag  = trim((string)($r['shop_tag'] ?? ''));
+          $tagLabel = ($shopTag !== '') ? $shopTag : (string)$uid;
+          $hasPlan   = ((int)($r['has_plan'] ?? 0) === 1);
+          $planOff   = $hasPlan && ((int)($r['plan_is_off'] ?? 0) === 1);
+          $planStart = $hasPlan ? (string)($r['plan_start_time'] ?? '') : '';
+          $attendanceStatus = (string)($r['attendance_status'] ?? '');
+
+          $statusLabel = '未出勤';
+          if (!$hasPlan) $statusLabel = '予定なし';
+          else if ($planOff) $statusLabel = '休み';
+          else if ($attendanceStatus === 'absent') $statusLabel = '欠勤';
+          else if ($r['clock_out']) $statusLabel = '退勤済';
+          else if ($r['clock_in']) $statusLabel = '出勤中';
+
+          $isLate = false;
+          if ($attendanceStatus !== 'absent' && $hasPlan && !$planOff && $planStart !== '' && empty($r['clock_in'])) {
+            $planDT = new DateTime($bizDate . ' ' . substr($planStart, 0, 5) . ':00', new DateTimeZone('Asia/Tokyo'));
+            if ($now > $planDT) $isLate = true;
+          }
+
+          $state = 'wait';
+          if (!$hasPlan) $state = 'noplan';
+          else if ($planOff) $state = 'off';
+          else if ($attendanceStatus === 'absent') $state = 'absent';
+          else if ($r['clock_out']) $state = 'done';
+          else if ($r['clock_in']) $state = 'in';
+          else $state = ($isLate ? 'late' : 'wait');
+        ?>
+          <div class="mobileSimpleCard row-state-<?= h($state) ?>">
+            <span class="badgeState s-<?= h($state) ?>"><?= h($statusLabel) ?></span>
+            <span class="mobileSimpleCard__tag">店番 <?= h($tagLabel) ?></span>
+            <span class="mobileSimpleCard__name"><?= h($name) ?></span>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+
     <!-- 今日 -->
     <div class="card" style="margin-top:14px;">
       <div class="sectionHead">
@@ -1558,6 +1606,54 @@ render_header('本日の勤務予定', [
 .weekToggleBtn[aria-expanded="true"]::before{
   content:"-";
 }
+.mobileSimpleBoard{
+  display:none;
+  margin-top:14px;
+}
+.mobileSimpleGrid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
+}
+.mobileSimpleCard{
+  display:grid;
+  gap:6px;
+  padding:10px;
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:14px;
+  background:#ffffff;
+  box-shadow:0 8px 18px rgba(15,23,42,.05);
+  min-width:0;
+}
+.mobileSimpleCard .badgeState{
+  min-width:0;
+  width:100%;
+  justify-content:center;
+}
+.mobileSimpleCard__tag{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:0 8px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.10);
+  background:#f8fafc;
+  color:#334155;
+  font-size:11px;
+  font-weight:900;
+  white-space:nowrap;
+}
+.mobileSimpleCard__name{
+  display:block;
+  min-width:0;
+  font-size:14px;
+  font-weight:1000;
+  line-height:1.3;
+  color:#0f172a;
+  text-align:center;
+  word-break:break-word;
+}
 .mobileCastHead{
   display:none;
 }
@@ -1975,6 +2071,29 @@ body.today-density-compact .col-action .btn{
     line-height:1.25;
     white-space:normal;
     text-align:center;
+  }
+  .mobileSimpleBoard{
+    display:block;
+  }
+  .mobileSimpleGrid{
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:6px;
+  }
+  .mobileSimpleCard{
+    padding:8px 6px;
+    border-radius:12px;
+  }
+  .mobileSimpleCard .badgeState{
+    padding:5px 6px;
+    font-size:10px;
+  }
+  .mobileSimpleCard__tag{
+    min-height:24px;
+    font-size:10px;
+    padding:0 6px;
+  }
+  .mobileSimpleCard__name{
+    font-size:13px;
   }
   .tblWrap{
     overflow:visible;
