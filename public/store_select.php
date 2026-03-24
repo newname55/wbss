@@ -19,7 +19,6 @@ $userId  = function_exists('current_user_id') ? (int)current_user_id() : (int)($
 $isSuper = has_role('super_user');
 $isAdmin = has_role('admin');
 $isMgr   = has_role('manager');
-
 $returnRaw = (string)($_GET['return'] ?? $_GET['next'] ?? '/wbss/public/dashboard.php');
 $returnTo = normalize_internal_wbss_path($returnRaw, '/wbss/public/dashboard.php');
 
@@ -83,11 +82,10 @@ foreach ($stores as $store) {
 
 render_page_start('店舗選択');
 render_header('店舗選択', [
-  'back_href'  => '/wbss/public/logout.php',
-  'back_label' => 'ログアウト',
-  'right_html' => $selectedStore
-    ? '<span class="pill"><span class="pill__label">現在</span><span class="pill__value">' . h((string)$selectedStore['name']) . ' (#' . (int)$selectedStore['id'] . ')</span></span>'
-    : '',
+  'back_href'  => $returnTo,
+  'back_label' => '戻る',
+  'show_store' => false,
+  'show_user'  => false,
 ]);
 ?>
 <div class="page">
@@ -115,11 +113,6 @@ render_header('店舗選択', [
             <span class="store-select-chip">権限 manager</span>
           <?php endif; ?>
         </div>
-      </div>
-
-      <div class="store-select-hero__side">
-        <a class="btn" href="/wbss/public/logout.php">ログアウト</a>
-        <a class="btn btn-primary" href="<?= h($returnTo) ?>">戻る</a>
       </div>
     </section>
 
@@ -179,10 +172,6 @@ render_header('店舗選択', [
 }
 .store-select-hero{
   padding:20px;
-  display:grid;
-  grid-template-columns:minmax(0, 1.3fr) auto;
-  gap:16px;
-  align-items:start;
 }
 .store-select-kicker{
   font-size:12px;
@@ -330,14 +319,10 @@ body[data-theme="light"] .store-card.is-current{
 }
 @media (max-width: 720px){
   .store-select-hero{
-    grid-template-columns:1fr;
     padding:16px;
   }
   .store-select-hero h1{
     font-size:24px;
-  }
-  .store-select-hero__side{
-    min-width:0;
   }
   .store-grid{
     grid-template-columns:1fr;
@@ -349,6 +334,24 @@ body[data-theme="light"] .store-card.is-current{
   }
   .store-card__name{
     font-size:19px;
+  }
+}
+@media (max-width: 480px){
+  .store-select-shell{
+    padding-bottom:20px;
+  }
+  .store-select-hero h1{
+    font-size:22px;
+  }
+  .store-select-hero p{
+    font-size:14px;
+  }
+  .store-select-summary{
+    gap:6px;
+  }
+  .store-select-chip{
+    width:100%;
+    justify-content:center;
   }
 }
 </style>
