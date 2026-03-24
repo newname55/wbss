@@ -1,17 +1,19 @@
 #!/bin/bash
 
-set -u
+set +u
 
 cd /var/www/html/wbss || exit 1
 
-# ===== 環境変数読み込み =====
+# ===== 環境変数 =====
 ENV_FILE="/var/www/.wbss_env"
 [ -f "$ENV_FILE" ] && source "$ENV_FILE"
 
 LINE_TOKEN="${LINE_DEPLOY_TOKEN:-}"
 LINE_USER="${LINE_DEPLOY_USER:-}"
 CRON_SECRET_VALUE="${CRON_SECRET:-}"
-APP_BASE_URL="${APP_BASE_URL:-https://haruto.asuscomm.com/wbss}"
+
+# 👇 ここ重要（publicなし）
+APP_BASE_URL="${APP_BASE_URL:-https://ss5456ds1fds2f1dsf.asuscomm.com/wbss}"
 
 send_line() {
   local msg="$1"
@@ -38,7 +40,7 @@ PY
 }
 
 log_deploy() {
-  local env_name="$1"exit
+  local env_name="$1"
   local branch_name="$2"
   local before_commit="$3"
   local after_commit="$4"
@@ -46,11 +48,15 @@ log_deploy() {
   local detail="$6"
 
   if [ -z "$CRON_SECRET_VALUE" ]; then
-    echo "[WARN] CRON_SECRET 未設定のため deploy_logs 保存をスキップ"
+    echo "[WARN] CRON_SECRET 未設定"
     return 0
   fi
 
-  curl -sS -X POST "${APP_BASE_URL}/public/api/deploy_log.php" \
+  local url="${APP_BASE_URL}/public/api/deploy_log.php"
+
+  echo "LOG SEND → $url"
+
+  curl -sS -X POST "$url" \
     -d "secret=${CRON_SECRET_VALUE}" \
     -d "environment=${env_name}" \
     -d "host_name=${HOSTNAME_SHORT}" \
@@ -59,7 +65,7 @@ log_deploy() {
     -d "after_commit=${after_commit}" \
     -d "status=${status}" \
     -d "executed_by=${EXECUTED_BY}" \
-    --data-urlencode "detail_text=${detail}" >/dev/null
+    --data-urlencode "detail_text=${detail}"
 }
 
 START="$(date '+%Y-%m-%d %H:%M:%S')"
@@ -89,7 +95,7 @@ end: $END
 main: $AFTER_MAIN
 ${APP_BASE_URL}/"
 
-    log_deploy "prod" "main" "$BEFORE_MAIN" "$AFTER_MAIN" "success" "更新なし / raspi5(main) 同期成功"
+    log_deploy "prod" "main" "$BEFORE_MAIN" "$AFTER_MAIN" "success" "更新なし"
   else
     MSG="✅ WBSS 本番deploy成功
 host: $HOSTNAME_SHORT
@@ -100,7 +106,7 @@ before: $BEFORE_MAIN
 after: $AFTER_MAIN
 ${APP_BASE_URL}/"
 
-    log_deploy "prod" "main" "$BEFORE_MAIN" "$AFTER_MAIN" "success" "raspi5(main) 同期成功"
+    log_deploy "prod" "main" "$BEFORE_MAIN" "$AFTER_MAIN" "success" "更新あり"
   fi
 else
   MSG="❌ WBSS 本番deploy失敗
@@ -110,7 +116,7 @@ start: $START
 end: $END
 main_status: $MAIN_STATUS"
 
-  log_deploy "prod" "main" "$BEFORE_MAIN" "$AFTER_MAIN" "failed" "raspi5(main) deploy失敗 / status=$MAIN_STATUS"
+  log_deploy "prod" "main" "$BEFORE_MAIN" "$AFTER_MAIN" "failed" "deploy失敗"
 fi
 
 send_line "$MSG"
