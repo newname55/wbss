@@ -525,6 +525,9 @@ render_header('在庫一覧', [
   border-radius:16px;
   background:rgba(255,255,255,.04);
 }
+.simple-filter-card.search-card{
+  padding:14px 16px;
+}
 .simple-filter-card label{
   display:block;
   font-size:12px;
@@ -573,6 +576,49 @@ render_header('在庫一覧', [
 }
 details[open] .detail-toggle::before{
   content:"▼";
+}
+
+.boardSearch{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:44px;
+  padding:0 12px;
+  border:1px solid rgba(15,23,42,.12);
+  border-radius:12px;
+  background:#fff;
+}
+.boardSearch__label{
+  font-size:12px;
+  font-weight:900;
+  color:#475569;
+  white-space:nowrap;
+}
+.boardSearch__input{
+  width:100%;
+  min-width:0;
+  border:none;
+  outline:none;
+  background:transparent;
+  color:#0f172a;
+  font-size:14px;
+}
+.boardSearch__input::-webkit-search-cancel-button{
+  cursor:pointer;
+}
+.list-count{
+  margin-top:4px;
+  font-size:12px;
+  font-weight:800;
+  color:var(--muted);
+}
+.product-row-is-highlighted{
+  outline:2px solid rgba(59,130,246,.42);
+  outline-offset:-2px;
+}
+.product-card-is-highlighted{
+  outline:2px solid rgba(59,130,246,.42);
+  outline-offset:2px;
 }
 
 .filter-grid{
@@ -836,6 +882,17 @@ body[data-theme="light"] input.btn.in:focus{
   outline:none;
   border-color:#3b82f6;
   box-shadow:0 0 0 4px rgba(59,130,246,.14);
+}
+body[data-theme="light"] .boardSearch{
+  background:#fff;
+  border-color:#d9e1ea;
+  box-shadow:0 4px 14px rgba(15,23,42,.04);
+}
+body[data-theme="light"] .boardSearch__label{
+  color:#5b6b80;
+}
+body[data-theme="light"] .boardSearch__input{
+  color:#102033;
 }
 body[data-theme="light"] .filter-check{
   border:2px solid #d9e1ea;
@@ -1192,9 +1249,20 @@ body[data-theme="light"] .tbl td{
       <input type="hidden" name="store_id" value="<?= (int)$store_id ?>">
 
       <div class="simple-filters">
-        <div class="simple-filter-card">
+        <div class="simple-filter-card search-card">
           <label>商品をさがす</label>
-          <input class="btn in" name="q" value="<?= h($q) ?>" placeholder="例）角 / 鏡月 / 490...">
+          <div class="boardSearch" id="stockSearchForm">
+            <span class="boardSearch__label">検索</span>
+            <input
+              type="search"
+              id="stockSearch"
+              class="boardSearch__input"
+              name="q"
+              value="<?= h($q) ?>"
+              placeholder="例）角 / 鏡月 / 490..."
+              autocomplete="off"
+            >
+          </div>
         </div>
 
         <div class="simple-filter-card">
@@ -1308,6 +1376,7 @@ body[data-theme="light"] .tbl td{
       <div>
         <div class="table-card__title">商品一覧</div>
         <div class="table-card__desc">数量、発注点、最終更新、操作を一行で見られるようにしています。</div>
+        <div class="list-count"><span id="visibleProductCount"><?= count($rows) ?></span> / <?= count($rows) ?> 件を表示中</div>
       </div>
     </div>
     <div>
@@ -1347,8 +1416,20 @@ body[data-theme="light"] .tbl td{
 
               $last  = format_stock_last_move((string)($r['last_move_at'] ?? ''));
               $moveq = move_q_for_row($r);
+              $searchParts = array_filter([
+                (string)($r['id'] ?? ''),
+                (string)($r['name'] ?? ''),
+                (string)($r['barcode'] ?? ''),
+                (string)$cname,
+                (string)ptype_label((string)($r['product_type'] ?? '')),
+              ], static fn($v) => $v !== '');
+              $searchText = mb_strtolower(trim(implode(' ', $searchParts)), 'UTF-8');
             ?>
-            <tr>
+            <tr
+              id="product-row-<?= (int)$r['id'] ?>"
+              data-product-row
+              data-search="<?= h($searchText) ?>"
+            >
               <td><?= (int)$r['id'] ?></td>
               <td style="font-weight:900;" title="<?= h((string)$r['name']) ?>">
                 <div><?= h((string)$r['name']) ?></div>
@@ -1420,8 +1501,22 @@ body[data-theme="light"] .tbl td{
 
             $last    = format_stock_last_move((string)($r['last_move_at'] ?? ''));
             $moveq   = move_q_for_row($r);
+            $searchParts = array_filter([
+              (string)($r['id'] ?? ''),
+              (string)($r['name'] ?? ''),
+              (string)($r['barcode'] ?? ''),
+              (string)$cname,
+              (string)ptype_label((string)($r['product_type'] ?? '')),
+            ], static fn($v) => $v !== '');
+            $searchText = mb_strtolower(trim(implode(' ', $searchParts)), 'UTF-8');
           ?>
-          <div class="sp-card">
+          <div
+            class="sp-card"
+            id="product-card-<?= (int)$r['id'] ?>"
+            data-product-card
+            data-product-id="<?= (int)$r['id'] ?>"
+            data-search="<?= h($searchText) ?>"
+          >
             <div class="sp-head">
               <div>
                 <div class="sp-name"><?= h((string)$r['name']) ?></div>
@@ -1499,6 +1594,83 @@ document.querySelectorAll('.sort-option input[type="radio"]').forEach((input) =>
   syncGroup();
   input.addEventListener('change', syncGroup);
 });
+
+(() => {
+  const searchInput = document.getElementById('stockSearch');
+  const searchForm = document.getElementById('stockSearchForm');
+  const visibleCount = document.getElementById('visibleProductCount');
+  const rows = Array.from(document.querySelectorAll('[data-product-row]'));
+  const cards = Array.from(document.querySelectorAll('[data-product-card]'));
+
+  if (!searchInput || (rows.length === 0 && cards.length === 0)) {
+    return;
+  }
+
+  const normalizeText = (value) => String(value || '').trim().toLowerCase();
+
+  function applyProductSearch() {
+    const keyword = normalizeText(searchInput.value);
+    let shown = 0;
+
+    rows.forEach((row) => {
+      const matches = keyword === '' || normalizeText(row.dataset.search).includes(keyword);
+      row.hidden = !matches;
+      row.classList.remove('product-row-is-highlighted');
+      if (matches) shown += 1;
+    });
+
+    cards.forEach((card) => {
+      const matches = keyword === '' || normalizeText(card.dataset.search).includes(keyword);
+      card.hidden = !matches;
+      card.classList.remove('product-card-is-highlighted');
+    });
+
+    if (visibleCount) {
+      visibleCount.textContent = String(shown);
+    }
+  }
+
+  function scrollToFirstVisible() {
+    const firstRow = rows.find((row) => !row.hidden);
+    if (firstRow) {
+      firstRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      firstRow.classList.add('product-row-is-highlighted');
+      window.setTimeout(() => firstRow.classList.remove('product-row-is-highlighted'), 1600);
+      return;
+    }
+
+    const firstCard = cards.find((card) => !card.hidden);
+    if (firstCard) {
+      firstCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      firstCard.classList.add('product-card-is-highlighted');
+      window.setTimeout(() => firstCard.classList.remove('product-card-is-highlighted'), 1600);
+    }
+  }
+
+  searchInput.addEventListener('input', applyProductSearch);
+  searchInput.addEventListener('search', applyProductSearch);
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyProductSearch();
+      if (searchInput.value.trim() !== '') {
+        scrollToFirstVisible();
+      }
+    }
+  });
+
+  if (searchForm) {
+    searchForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      applyProductSearch();
+      if (searchInput.value.trim() !== '') {
+        scrollToFirstVisible();
+      }
+    });
+  }
+
+  applyProductSearch();
+})();
 </script>
 
 <?php render_page_end(); ?>
