@@ -720,16 +720,20 @@ input:focus, select:focus{
 }
 
 @media (max-width: 1180px){
+  .wrap{
+    padding: 8px 8px 16px;
+  }
+
   .stickyHeader{
-    padding: 8px 0 10px;
+    padding: 6px 0 8px;
   }
 
   .headCard{
-    padding: 10px;
+    padding: 8px;
   }
 
   .titleBox h1{
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .sub{
@@ -741,18 +745,21 @@ input:focus, select:focus{
   }
 
   .statusPill{
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: 5px 9px;
+    font-size: 11px;
   }
 
   .actionGrid{
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap:6px;
+    margin-top:6px;
   }
 
   .actionGrid .btn{
-    min-height: 48px;
-    font-size: 14px;
-    padding: 10px 12px;
+    min-height: 42px;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 12px;
   }
 
   .rightCol{
@@ -761,6 +768,94 @@ input:focus, select:focus{
 
   .leftCol{
     order: 1;
+  }
+
+  .layout{
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .card{
+    padding: 8px;
+  }
+
+  .compactCard{
+    padding: 8px;
+  }
+
+  .compactCard .cardTitle{
+    margin-bottom: 4px;
+  }
+
+  .compactCard .cardTitle .muted{
+    display:none;
+  }
+
+  .globalQuickGrid{
+    gap:6px;
+    margin-bottom:6px;
+  }
+
+  .compactGrid{
+    gap:6px;
+  }
+
+  .compactCard .blockSafe{
+    padding: 7px 8px;
+    border-radius: 13px;
+  }
+
+  .compactCard label{
+    font-size: 10px;
+    margin-bottom: 3px;
+  }
+
+  .compactCard input,
+  .compactCard select{
+    min-height: 40px;
+    padding: 8px 9px;
+    font-size: 13px;
+  }
+
+  .compactCard .btn{
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .compactCard .muted{
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  .quickMeta{
+    margin-top:4px;
+    gap:4px;
+  }
+
+  .quickHint{
+    display:none;
+  }
+
+  .compactCard .timerBox{
+    padding: 5px 6px;
+  }
+
+  .compactCard .timerBig{
+    font-size: 16px;
+  }
+
+  .compactCard .warnBox{
+    padding: 5px 7px;
+    font-size: 10px;
+  }
+
+  .globalActionRow{
+    gap:6px;
+  }
+
+  .compactCard > .grid4 > .full.muted{
+    display:none;
   }
 }
 
