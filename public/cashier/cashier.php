@@ -354,7 +354,7 @@ body{
   margin-top: 12px;
   align-items:start;
 }
-@media (max-width: 900px){
+@media (max-width: 1180px){
   .layout{ grid-template-columns: 1fr; }
 }
 
@@ -717,6 +717,51 @@ input:focus, select:focus{
 .stickyRight{ position: sticky; top: 96px; }
 @media (max-width: 1200px){
   .stickyRight{ position: static; }
+}
+
+@media (max-width: 1180px){
+  .stickyHeader{
+    padding: 8px 0 10px;
+  }
+
+  .headCard{
+    padding: 10px;
+  }
+
+  .titleBox h1{
+    font-size: 16px;
+  }
+
+  .sub{
+    display:none;
+  }
+
+  .headCard > .muted{
+    display:none;
+  }
+
+  .statusPill{
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .actionGrid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .actionGrid .btn{
+    min-height: 48px;
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .rightCol{
+    order: 2;
+  }
+
+  .leftCol{
+    order: 1;
+  }
 }
 
 /* ====== Closed mode overlay ====== */
