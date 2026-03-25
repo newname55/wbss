@@ -1,17 +1,17 @@
 ALTER TABLE stores
   ADD COLUMN lifecycle_status ENUM('active','suspended','decommissioning','decommissioned')
-    NOT NULL DEFAULT 'active' AFTER status,
-  ADD COLUMN decommission_requested_at DATETIME NULL AFTER lifecycle_status,
-  ADD COLUMN decommission_approved_at DATETIME NULL AFTER decommission_requested_at,
-  ADD COLUMN decommission_scheduled_at DATETIME NULL AFTER decommission_approved_at,
-  ADD COLUMN decommission_completed_at DATETIME NULL AFTER decommission_scheduled_at;
+    NOT NULL DEFAULT 'active',
+  ADD COLUMN decommission_requested_at DATETIME NULL,
+  ADD COLUMN decommission_approved_at DATETIME NULL,
+  ADD COLUMN decommission_scheduled_at DATETIME NULL,
+  ADD COLUMN decommission_completed_at DATETIME NULL;
 
 CREATE TABLE IF NOT EXISTS store_decommission_jobs (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  store_id BIGINT UNSIGNED NOT NULL,
-  requested_by BIGINT UNSIGNED NOT NULL,
-  approved_by BIGINT UNSIGNED NULL,
-  executed_by BIGINT UNSIGNED NULL,
+  store_id INT UNSIGNED NOT NULL,
+  requested_by INT UNSIGNED NOT NULL,
+  approved_by INT UNSIGNED NULL,
+  executed_by INT UNSIGNED NULL,
   status ENUM(
     'requested',
     'approved',
@@ -40,16 +40,13 @@ CREATE TABLE IF NOT EXISTS store_decommission_jobs (
   executed_ip VARCHAR(64) NULL,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_store_status (store_id, status),
-  INDEX idx_status_scheduled (status, scheduled_at),
-  CONSTRAINT fk_store_decommission_jobs_store
-    FOREIGN KEY (store_id) REFERENCES stores(id)
-    ON DELETE RESTRICT
-);
+  INDEX idx_status_scheduled (status, scheduled_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS store_decommission_logs (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   job_id BIGINT UNSIGNED NOT NULL,
-  store_id BIGINT UNSIGNED NOT NULL,
+  store_id INT UNSIGNED NOT NULL,
   step_key VARCHAR(64) NOT NULL,
   step_label VARCHAR(255) NOT NULL,
   status ENUM('started','completed','failed') NOT NULL,
@@ -62,12 +59,12 @@ CREATE TABLE IF NOT EXISTS store_decommission_logs (
   CONSTRAINT fk_store_decommission_logs_job
     FOREIGN KEY (job_id) REFERENCES store_decommission_jobs(id)
     ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS store_decommission_snapshots (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   job_id BIGINT UNSIGNED NOT NULL,
-  store_id BIGINT UNSIGNED NOT NULL,
+  store_id INT UNSIGNED NOT NULL,
   customers_count INT UNSIGNED NOT NULL DEFAULT 0,
   tickets_count INT UNSIGNED NOT NULL DEFAULT 0,
   orders_count INT UNSIGNED NOT NULL DEFAULT 0,
@@ -81,4 +78,4 @@ CREATE TABLE IF NOT EXISTS store_decommission_snapshots (
   CONSTRAINT fk_store_decommission_snapshots_job
     FOREIGN KEY (job_id) REFERENCES store_decommission_jobs(id)
     ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
