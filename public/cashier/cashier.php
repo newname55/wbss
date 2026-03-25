@@ -392,8 +392,8 @@ body{
 .globalQuickGrid{
   display:grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap:10px;
-  margin-bottom:10px;
+  gap:8px;
+  margin-bottom:8px;
 }
 @media (max-width: 1180px){
   .globalQuickGrid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -403,10 +403,10 @@ body{
 }
 
 .quickMeta{
-  margin-top:8px;
+  margin-top:6px;
   display:flex;
   flex-wrap:wrap;
-  gap:8px;
+  gap:6px;
 }
 
 .quickStatus{
@@ -418,14 +418,14 @@ body{
 }
 
 .quickStatus strong{
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 1100;
 }
 
 .globalActionRow{
   display:grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap:10px;
+  gap:8px;
 }
 @media (max-width: 1024px){
   .globalActionRow{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -550,6 +550,118 @@ input:focus, select:focus{
 .blockGreen{ background: var(--softGreen); border-color: rgba(22,163,74,.25); }
 .blockYellow{ background: var(--softYellow); border-color: rgba(245,158,11,.25); }
 .blockPurple{ background: var(--softPurple); border-color: rgba(124,58,237,.20); }
+
+.compactCard{
+  padding: 10px;
+}
+
+.compactCard .cardTitle{
+  margin-bottom: 6px;
+}
+
+.compactCard .cardTitle h2{
+  font-size: 13px;
+}
+
+.compactGrid{
+  gap:8px;
+}
+
+.compactCard .blockSafe{
+  padding: 9px 10px;
+  border-radius: 15px;
+}
+
+.compactCard label{
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.compactCard input,
+.compactCard select{
+  min-height: 46px;
+  padding: 10px 10px;
+  font-size: 14px;
+  border-radius: 12px;
+}
+
+.compactCard .btn{
+  min-height: 46px;
+  padding: 10px 12px;
+  font-size: 14px;
+  border-radius: 13px;
+}
+
+.compactCard .muted{
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.compactCard .badgeMini,
+.compactCard .badgeMini2,
+.compactCard .badge{
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+.compactCard .setSummaryBar{
+  margin: 6px 0 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  gap:6px;
+}
+
+.compactCard .timerBox{
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+
+.compactCard .timerBig{
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.compactCard .warnBox{
+  margin-top: 6px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.quickSelect{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.quickSelect select,
+.quickSelect input{
+  flex:1 1 auto;
+}
+
+.quickValue{
+  font-size: 11px;
+  font-weight: 1000;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.quickStatusLine{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:4px;
+}
+
+.quickStatusLine strong{
+  font-size: 15px;
+}
+
+.quickHint{
+  font-size: 10px;
+  color: var(--muted);
+}
 
 /* ====== Right column sticky ====== */
 .stickyRight{ position: sticky; top: 96px; }
@@ -975,7 +1087,7 @@ input:focus, select:focus{
     <!-- ===== Left ===== -->
     <div class="leftCol">
 
-      <div class="card">
+      <div class="card compactCard">
         <div class="cardTitle">
           <h2>全体操作</h2>
           <div class="muted">先に席を決めておくと、ドリンク追加まで迷わず進めます</div>
@@ -984,7 +1096,7 @@ input:focus, select:focus{
         <div id="globalQuickTools"></div>
         <div id="currentSetSummary" class="setSummaryBar"></div>
 
-        <div class="grid4">
+        <div class="grid4 compactGrid">
           <div class="blockSafe blockBlue">
             <label>開始時刻（セット1の開始）</label>
             <input type="time" id="start_time" value="20:00" step="60">
@@ -1226,7 +1338,10 @@ input:focus, select:focus{
       <div class="globalQuickGrid">
         <div class="blockSafe blockBlue">
           <label>現在セットの席</label>
-          <select id="quickSeatSel">${seatOptionsHtml(seatId)}</select>
+          <div class="quickSelect">
+            <select id="quickSeatSel">${seatOptionsHtml(seatId)}</select>
+            <span class="quickValue">${seatMissing ? '未定' : escapeHtml(seatLabelById(seatId))}</span>
+          </div>
           <div class="quickMeta">
             <span class="badgeMini">${seatMissing ? '席未決定' : `席 ${escapeHtml(seatLabelById(seatId))}`}</span>
             <span class="badgeMini">${seatIsVip(seatId) ? 'VIP自動ON' : '通常席'}</span>
@@ -1235,8 +1350,11 @@ input:focus, select:focus{
 
         <div class="blockSafe blockYellow">
           <label>来店人数</label>
-          <input type="number" id="quickGuestPeople" min="0" value="${setObj.guest_people|0}">
-          <div class="muted">現在のセットにそのまま反映</div>
+          <div class="quickSelect">
+            <input type="number" id="quickGuestPeople" min="0" value="${setObj.guest_people|0}">
+            <span class="quickValue">${setObj.guest_people|0}名</span>
+          </div>
+          <div class="quickHint">現在セットへ即反映</div>
         </div>
 
         <div class="blockSafe blockPurple">
@@ -1244,12 +1362,12 @@ input:focus, select:focus{
           <select id="quickKindSel">
             ${kindOptionsHtml(setObj.kind || 'normal50', idx)}
           </select>
-          <div class="muted">延長前の確認もここでできます</div>
+          <div class="quickHint">延長前の確認もここで</div>
         </div>
 
         <div class="blockSafe blockGreen">
           <label>現在セットの状態</label>
-          <div class="quickStatus">
+          <div class="quickStatusLine">
             <strong>${seatMissing ? '席を先に決定' : 'ドリンク追加OK'}</strong>
             <span class="badgeMini">セット${idx + 1}</span>
           </div>
