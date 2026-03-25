@@ -306,9 +306,9 @@ body{
 /* ====== Action Bar ====== */
 .actionGrid{
   display:grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
 }
 @media (max-width: 1200px){
   .actionGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -354,7 +354,7 @@ body{
   margin-top: 12px;
   align-items:start;
 }
-@media (max-width: 900px){
+@media (max-width: 1180px){
   .layout{ grid-template-columns: 1fr; }
 }
 
@@ -387,6 +387,56 @@ body{
 @media (max-width: 1024px){
   .grid4{ grid-template-columns: 1fr 1fr; }
   .grid3{ grid-template-columns: 1fr; }
+}
+
+.globalQuickGrid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap:8px;
+  margin-bottom:8px;
+}
+@media (max-width: 1180px){
+  .globalQuickGrid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px){
+  .globalQuickGrid{ grid-template-columns: 1fr; }
+}
+
+.quickMeta{
+  margin-top:6px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+
+.quickStatus{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.quickStatus strong{
+  font-size: 16px;
+  font-weight: 1100;
+}
+
+.globalActionRow{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap:8px;
+}
+.globalActionRow #closeBtn{
+  grid-column: span 2;
+}
+@media (max-width: 1024px){
+  .globalActionRow{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .globalActionRow #closeBtn{ grid-column: span 1; }
+}
+@media (max-width: 640px){
+  .globalActionRow{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .globalActionRow #closeBtn{ grid-column: span 2; }
 }
 
 /* ✅ labelは統一（重複削除） */
@@ -506,10 +556,307 @@ input:focus, select:focus{
 .blockYellow{ background: var(--softYellow); border-color: rgba(245,158,11,.25); }
 .blockPurple{ background: var(--softPurple); border-color: rgba(124,58,237,.20); }
 
+.compactCard{
+  padding: 10px;
+}
+
+.compactCard .cardTitle{
+  margin-bottom: 6px;
+}
+
+.compactCard .cardTitle h2{
+  font-size: 13px;
+}
+
+.compactGrid{
+  gap:8px;
+}
+
+.compactCard .blockSafe{
+  padding: 9px 10px;
+  border-radius: 15px;
+}
+
+.compactCard label{
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.compactCard input,
+.compactCard select{
+  min-height: 46px;
+  padding: 10px 10px;
+  font-size: 14px;
+  border-radius: 12px;
+}
+
+.compactCard .btn{
+  min-height: 46px;
+  padding: 10px 12px;
+  font-size: 13px;
+  border-radius: 13px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.compactCard .muted{
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.compactCard .badgeMini,
+.compactCard .badgeMini2,
+.compactCard .badge{
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+.compactCard .timerBox{
+  padding: 6px 8px;
+  border-radius: 12px;
+}
+
+.compactCard .timerBig{
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.compactCard .warnBox{
+  margin-top: 6px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.quickSelect{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.quickSelect select,
+.quickSelect input{
+  flex:1 1 auto;
+}
+
+.quickValue{
+  font-size: 11px;
+  font-weight: 1000;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.quickStatusLine{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:4px;
+}
+
+.quickStatusLine strong{
+  font-size: 15px;
+}
+
+.quickHint{
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.compactTimeGrid{
+  align-items:stretch;
+}
+
+.compactTimeGrid .blockSafe{
+  min-height: 0;
+}
+
+.compactField{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.compactField .muted{
+  min-height: 0;
+}
+
+.timerMini{
+  display:grid;
+  gap:2px;
+}
+
+.timerMiniTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+}
+
+.timerMiniMeta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.actionPair{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:8px;
+}
+
+.actionPair .btn{
+  min-width:0;
+  font-size: 12px;
+  letter-spacing: -.01em;
+}
+
 /* ====== Right column sticky ====== */
 .stickyRight{ position: sticky; top: 96px; }
 @media (max-width: 1200px){
   .stickyRight{ position: static; }
+}
+
+@media (max-width: 1180px){
+  .wrap{
+    padding: 8px 8px 16px;
+  }
+
+  .stickyHeader{
+    padding: 6px 0 8px;
+  }
+
+  .headCard{
+    padding: 8px;
+  }
+
+  .titleBox h1{
+    font-size: 15px;
+  }
+
+  .sub{
+    display:none;
+  }
+
+  .headCard > .muted{
+    display:none;
+  }
+
+  .statusPill{
+    padding: 5px 9px;
+    font-size: 11px;
+  }
+
+  .actionGrid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap:6px;
+    margin-top:6px;
+  }
+
+  .actionGrid .btn{
+    min-height: 42px;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 12px;
+  }
+
+  .rightCol{
+    order: 2;
+  }
+
+  .leftCol{
+    order: 1;
+  }
+
+  .layout{
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .card{
+    padding: 8px;
+  }
+
+  .compactCard{
+    padding: 8px;
+  }
+
+  .compactCard .cardTitle{
+    margin-bottom: 4px;
+  }
+
+  .compactCard .cardTitle .muted{
+    display:none;
+  }
+
+  .globalQuickGrid{
+    gap:6px;
+    margin-bottom:6px;
+  }
+
+  .compactGrid{
+    gap:6px;
+  }
+
+  .compactCard .blockSafe{
+    padding: 7px 8px;
+    border-radius: 13px;
+  }
+
+  .compactCard label{
+    font-size: 10px;
+    margin-bottom: 3px;
+  }
+
+  .compactCard input,
+  .compactCard select{
+    min-height: 40px;
+    padding: 8px 9px;
+    font-size: 13px;
+  }
+
+  .compactCard .btn{
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .compactCard .muted{
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  .quickMeta{
+    margin-top:4px;
+    gap:4px;
+  }
+
+  .quickHint{
+    display:none;
+  }
+
+  .compactCard .timerBox{
+    padding: 5px 6px;
+  }
+
+  .compactCard .timerBig{
+    font-size: 16px;
+  }
+
+  .compactCard .warnBox{
+    padding: 5px 7px;
+    font-size: 10px;
+  }
+
+  .globalActionRow{
+    gap:6px;
+  }
+
+  .compactCard > .grid4 > .full.muted{
+    display:none;
+  }
 }
 
 /* ====== Closed mode overlay ====== */
@@ -588,6 +935,40 @@ input:focus, select:focus{
   color: #0b2a6e;
 }
 
+.setTabCard{
+  min-width: 150px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  padding: 10px 14px;
+}
+
+.setTabCardTitle{
+  font-size:14px;
+  font-weight:1000;
+  line-height:1.1;
+}
+
+.setTabCardMeta{
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.2;
+}
+
+.tabXL.on .setTabCardMeta{
+  color:#335389;
+}
+
+.setPaneTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+
 .phaseTabs{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .phaseBtn{
   min-height: 60px;
@@ -604,6 +985,92 @@ input:focus, select:focus{
 }
 .phaseBtn.on{ background: var(--primary); color:#fff; border-color: var(--primary); }
 .phaseBtn.disabled{ opacity:.35; cursor:not-allowed; box-shadow:none; }
+
+.cashierDashTabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  padding:4px;
+  margin:10px 0 10px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:linear-gradient(180deg, #ffffff, #f7f8fc);
+  box-shadow:0 10px 24px rgba(15,18,34,.08);
+}
+
+.cashierDashTab{
+  appearance:none;
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--muted);
+  border-radius:14px;
+  min-height:58px;
+  padding:12px 16px;
+  font-size:15px;
+  font-weight:900;
+  line-height:1.2;
+  cursor:pointer;
+  transition:background .16s ease, color .16s ease, border-color .16s ease, transform .16s ease;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex:1 1 180px;
+}
+
+.cashierDashTab:hover{
+  color:var(--text);
+  border-color:rgba(37,99,235,.18);
+  background:rgba(37,99,235,.05);
+}
+
+.cashierDashTab.is-active{
+  color:#0f172a;
+  border-color:rgba(37,99,235,.20);
+  background:linear-gradient(135deg, #bfdbfe, #dbeafe 55%, #fef3c7);
+}
+
+.cashierDashTabIcon{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  background:#fff;
+  box-shadow: inset 0 0 0 1px rgba(15,18,34,.08);
+  font-size:16px;
+  flex:0 0 auto;
+}
+
+.cashierDashTabText{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:2px;
+}
+
+.cashierDashTabTitle{
+  font-size:14px;
+  font-weight:1000;
+  color:inherit;
+}
+
+.cashierDashTabMeta{
+  font-size:11px;
+  color:var(--muted);
+  font-weight:700;
+}
+
+.cashierDashTab.is-active .cashierDashTabMeta{
+  color:#334155;
+}
+
+.workTabPane{
+  display:none;
+}
+
+.workTabPane.active{
+  display:block;
+}
 
 .btnSmall{
   border:none;
@@ -658,20 +1125,6 @@ input:focus, select:focus{
   margin-bottom:8px;
 }
 .key{ font-weight:1000; }
-
-/* セットサマリ */
-.setSummaryBar{
-  margin: 8px 0 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: #fff;
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  align-items:center;
-}
-.setSummaryBar .badgeMini{ margin-right: 0; }
 
 /* ===== ドリンク金額 input + ボタン ===== */
 .amtRow{
@@ -913,13 +1366,8 @@ input:focus, select:focus{
       <div class="actionGrid">
         <a class="btn b-dark" href="/wbss/public/dashboard.php">ダッシュボード</a>
         <a class="btn b-blue" href="/wbss/public/cashier/index.php?store_id=<?= (int)$storeId ?>">新 会計一覧</a>
-        <button type="button" class="btn b-dark" id="saveBtnTop">保存（DB）</button>
-        <button class="btn b-red" type="button" id="closeBtn">会計（チェック）</button>
       </div>
 
-      <div class="muted" style="margin-top:8px;">
-        ※ legacy版は「押しやすさ」と「誤入力防止」を優先（色分け・大ボタン・タブ横スクロール）
-      </div>
     </div>
   </div>
 
@@ -930,50 +1378,55 @@ input:focus, select:focus{
     <!-- ===== Left ===== -->
     <div class="leftCol">
 
-      <div class="card">
+      <div class="card compactCard">
         <div class="cardTitle">
-          <h2>全体（開始・割引・タイマー・保存）</h2>
-          <div class="muted">まずは「▶スタート」→ セット/客 → ドリンク → 保存</div>
+          <h2>全体操作</h2>
+          <div class="muted">先に席を決めておくと、ドリンク追加まで迷わず進めます</div>
         </div>
 
-        <div id="currentSetSummary" class="setSummaryBar"></div>
+        <div id="globalQuickTools"></div>
 
-        <div class="grid4">
-          <div class="blockSafe blockBlue">
+        <div class="grid4 compactGrid compactTimeGrid">
+          <div class="blockSafe blockBlue compactField">
             <label>開始時刻（セット1の開始）</label>
             <input type="time" id="start_time" value="20:00" step="60">
             <div class="muted">※同伴は 20:00固定</div>
           </div>
 
-          <div class="blockSafe blockYellow">
+          <div class="blockSafe blockYellow compactField">
             <label>割引（税別・円）</label>
             <input type="number" id="discount" min="0" value="0" inputmode="numeric">
             <div class="muted">※入れ間違い防止：マイナス不可</div>
           </div>
 
-          <div class="blockSafe blockGreen">
+          <div class="blockSafe blockGreen compactField">
             <label>タイマー</label>
-            <div class="timerBox">
-              <div class="muted" id="timerInfo">未開始</div>
-              <div class="timerBig" id="timerRemain">—</div>
-              <div class="muted" id="timerEnds">—</div>
+            <div class="timerBox timerMini">
+              <div class="timerMiniTop">
+                <div class="muted" id="timerInfo">未開始</div>
+                <div class="timerBig" id="timerRemain">—</div>
+              </div>
+              <div class="timerMiniMeta">
+                <span id="timerEnds">—</span>
+              </div>
               <div class="warnBox" id="warnBox">交渉時間</div>
             </div>
           </div>
 
-          <div class="blockSafe blockPurple">
+          <div class="blockSafe blockPurple compactField">
             <label>操作</label>
-            <div style="display:grid;gap:10px;">
-              <button type="button" class="btn b-green" id="startBtn">▶ スタート</button>
+            <div class="actionPair">
+              <button type="button" class="btn b-green" id="startBtn">▶ 開始</button>
               <button type="button" class="btn b-orange" id="stopBtn">■ 停止</button>
             </div>
           </div>
 
-          <div class="full" style="display:grid;grid-template-columns: repeat(4, 1fr); gap:10px;">
+          <div class="full globalActionRow">
+            <button type="button" class="btn b-dark" id="saveBtnInline">保存（DB）</button>
             <button type="button" class="btn b-blue" id="addSetBtn">+ 延長</button>
             <button class="btn b-green" type="button" id="previewBtn">プレビュー</button>
             <button class="btn b-dark" type="button" id="freeHistBtn">FREE履歴</button>
-            <button type="button" class="btn b-cyan" id="serverCalcBtn_dup">サーバ確定（API）</button>
+            <button class="btn b-red" type="button" id="closeBtn">会計（チェック）</button>
           </div>
 
           <div class="full muted">
@@ -984,8 +1437,8 @@ input:focus, select:focus{
 
       <div class="card">
         <div class="cardTitle">
-          <h2>セット選択</h2>
-          <div class="muted">横にスワイプでタブ移動</div>
+          <h2>セット一覧</h2>
+          <div class="muted">上でセットを切り替え、下で内容を編集します</div>
         </div>
         <div class="tabs" id="setTabs"></div>
         <div class="pane" id="setPane"></div>
@@ -1041,9 +1494,10 @@ input:focus, select:focus{
 <script>
 /* ========= 保存（上部ボタン） ========= */
 (() => {
-  const saveTop = document.getElementById('saveBtnTop');
-  if (saveTop) {
-    saveTop.addEventListener('click', async () => {
+  ['saveBtnTop', 'saveBtnInline'].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
       try {
         await saveToDB();
         alert('保存しました');
@@ -1051,7 +1505,7 @@ input:focus, select:focus{
         alert('保存失敗: ' + (e?.message || e));
       }
     });
-  }
+  });
 
   /* ========= iPad版：追加の誤操作防止 ========= */
   const ids = ['serverCalcBtn', 'serverCalcBtn_dup', 'serverCalcBtn_head'];
@@ -1140,7 +1594,7 @@ input:focus, select:focus{
   const serverErrCard    = document.getElementById('serverErrCard');
   const serverErrEl      = document.getElementById('serverErr');
   
-  const currentSetSummaryEl = document.getElementById('currentSetSummary');
+  const globalQuickToolsEl = document.getElementById('globalQuickTools');
   
   function setFreePhase(setIndex, custNo, phase){
     const s = state.sets[setIndex];
@@ -1153,6 +1607,81 @@ input:focus, select:focus{
     cust.free.phase = phase;
     logEvent('free_phase_set', setIndex+1, {custNo, before, after: phase});
     render(false);
+  }
+
+  function kindOptionsHtml(selectedKind, idx){
+    return `
+      <option value="normal50" ${selectedKind==='normal50'?'selected':''}>通常50分 7000</option>
+      <option value="half25" ${selectedKind==='half25'?'selected':''}>ハーフ25分 3500</option>
+      <option value="pack_douhan" ${selectedKind==='pack_douhan'?'selected':''} ${idx>=1?'disabled':''}>同伴 13000</option>
+    `;
+  }
+
+  function renderGlobalQuickTools(setObj, idx){
+    if (!globalQuickToolsEl) return;
+    if (!setObj) {
+      globalQuickToolsEl.innerHTML = '';
+      return;
+    }
+
+    const seatId = clampSeatId(setObj.seat_id || 0);
+    const seatMissing = seatId <= 0;
+    const drinkSum = (setObj.drinks || []).reduce((a, d)=> a + (d.amount|0), 0);
+
+    globalQuickToolsEl.innerHTML = `
+      <div class="globalQuickGrid">
+        <div class="blockSafe blockBlue">
+          <label>現在セットの席</label>
+          <div class="quickSelect">
+            <select id="quickSeatSel">${seatOptionsHtml(seatId)}</select>
+            <span class="quickValue">${seatMissing ? '未定' : escapeHtml(seatLabelById(seatId))}</span>
+          </div>
+          <div class="quickMeta">
+            <span class="badgeMini">${seatMissing ? '席未決定' : `席 ${escapeHtml(seatLabelById(seatId))}`}</span>
+            <span class="badgeMini">${seatIsVip(seatId) ? 'VIP自動ON' : '通常席'}</span>
+          </div>
+        </div>
+
+        <div class="blockSafe blockYellow">
+          <label>来店人数</label>
+          <div class="quickSelect">
+            <input type="number" id="quickGuestPeople" min="0" value="${setObj.guest_people|0}">
+            <span class="quickValue">${setObj.guest_people|0}名</span>
+          </div>
+          <div class="quickHint">現在セットへ即反映</div>
+        </div>
+
+        <div class="blockSafe blockPurple">
+          <label>セット種別</label>
+          <select id="quickKindSel">
+            ${kindOptionsHtml(setObj.kind || 'normal50', idx)}
+          </select>
+          <div class="quickHint">延長前の確認もここで</div>
+        </div>
+
+        <div class="blockSafe blockGreen">
+          <label>現在セットの状態</label>
+          <div class="quickStatusLine">
+            <strong>${seatMissing ? '席を先に決定' : 'ドリンク追加OK'}</strong>
+            <span class="badgeMini">セット${idx + 1}</span>
+          </div>
+          <div class="quickMeta">
+            <span class="badgeMini">ドリンク ${drinkSum.toLocaleString()}円</span>
+            <span class="badgeMini">終了 ${escapeHtml(setObj.ends_at || '—')}</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('quickSeatSel')?.addEventListener('change', (e)=>{
+      setSeatId(idx, e.target.value);
+    });
+    document.getElementById('quickGuestPeople')?.addEventListener('change', (e)=>{
+      setGuestPeople(idx, e.target.value);
+    });
+    document.getElementById('quickKindSel')?.addEventListener('change', (e)=>{
+      setKindForSet(idx, e.target.value);
+    });
   }
 
 // CLOSEボタン：payments.php へ遷移（入金へ誘導）
@@ -1197,7 +1726,7 @@ input:focus, select:focus{
     closeBtn.disabled = true;
     closeBtn.classList.add('disabled');
     closeBtn.textContent = '入金完了（PAID）';
-    closeBtn.title = '満額入金済みです';
+    closeBtn.title = '入金済';
     return;
   }
 
@@ -1207,7 +1736,7 @@ input:focus, select:focus{
   const KIND = {
     normal50:   { price: 7000, dur: 50, label:'通常50分(7000)' },
     half25:     { price: 3500, dur: 25, label:'ハーフ25分(3500)' },
-    pack_douhan:{ price:13000, dur: 90, label:'同伴パック(20:00-21:30 13000)' },
+    pack_douhan:{ price:13000, dur: 90, label:'同伴 13000' },
   };
   const PACK_START = "20:00";
   const PACK_END   = "21:30";
@@ -1216,7 +1745,7 @@ input:focus, select:focus{
   const state = {
     sets: [],
     history: [],
-    ui: { selected_set_index: 0, last_payer_sel: null },
+    ui: { selected_set_index: 0, last_payer_sel: null, work_tab: 'set' },
     timer: { running:false, base_start_hhmm:null, interval_id:null },
     cast_candidates: [],
   };
@@ -1765,6 +2294,12 @@ input:focus, select:focus{
     s.customer_tab_selected = custNo;
     normalizeCustomers(s);
     logEvent('customer_tab_select', setIndex+1, {before, after:s.customer_tab_selected});
+    render(false);
+  }
+  function selectWorkTab(tabKey){
+    const allow = new Set(['set','customer','drink']);
+    const next = allow.has(tabKey) ? tabKey : 'set';
+    state.ui.work_tab = next;
     render(false);
   }
 
@@ -2554,10 +3089,15 @@ input:focus, select:focus{
   function render(full=true){
     setTabsEl.innerHTML = '';
     state.sets.forEach((s, i)=>{
+      const seatLabel = seatLabelById(s.seat_id || 0);
+      const tabDrinkSum = (s.drinks||[]).reduce((a,d)=>a + (d.amount|0), 0);
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tabXL' + (i === state.ui.selected_set_index ? ' on' : '');
-      b.textContent = `セット${i+1}（${seatLabelById(s.seat_id || 0)}）`;
+      b.className = 'tabXL setTabCard' + (i === state.ui.selected_set_index ? ' on' : '');
+      b.innerHTML = `
+        <span class="setTabCardTitle">セット${i+1}</span>
+        <span class="setTabCardMeta">席 ${escapeHtml(seatLabel)} / ドリンク ${tabDrinkSum.toLocaleString()}円</span>
+      `;
       b.title = buildFreeStatusText(s);
       b.addEventListener('click', ()=> selectSetTab(i));
       setTabsEl.appendChild(b);
@@ -2565,34 +3105,7 @@ input:focus, select:focus{
 
     const idx = state.ui.selected_set_index;
     const s = state.sets[idx];
-    // ✅ 選択中セット概要バー更新
-    if (currentSetSummaryEl && s){
-      let shMap = {};
-      for (let c=1;c<= (s.guest_people|0); c++){
-        const cust = s.customers[String(c)];
-        if (!cust) continue;
-        if (cust.mode === 'shimei' && cust.shimei){
-          Object.keys(cust.shimei).forEach(no=>{
-            if (shMap[no] === 'hon') return;
-            shMap[no] = cust.shimei[no] === 'hon' ? 'hon' : 'jounai';
-          });
-        }
-      }
-
-      const shimeiCount = Object.keys(shMap).length;
-      const charge = Math.max(s.guest_people|0, shimeiCount);
-      const drinkSum = (s.drinks||[]).reduce((a,d)=>a + (d.amount|0), 0);
-
-      currentSetSummaryEl.innerHTML = `
-        <span class="badgeMini">開始 <b>${s.started_at || '—'}</b></span>
-        <span class="badgeMini">終了 <b>${s.ends_at || '—'}</b></span>
-        <span class="badgeMini">kind <b>${escapeHtml(String(s.kind || 'normal50'))}</b></span>
-        <span class="badgeMini">席 <b>${escapeHtml(seatLabelById(s.seat_id || 0))}</b></span>
-        <span class="badgeMini">指名 <b>${shimeiCount}</b>人</span>
-        <span class="badgeMini">課金 <b>${charge}</b>人</span>
-        <span class="badgeMini">ドリンク <b>${drinkSum.toLocaleString()}</b>円</span>
-      `;
-    }
+    renderGlobalQuickTools(s, idx);
     if (!s) { setPaneEl.innerHTML = `<div class="muted">セットがありません</div>`; return; }
 
     normalizeCustomers(s);
@@ -2618,21 +3131,21 @@ input:focus, select:focus{
     const shimeiCount = Object.keys(shMap).length;
     const charge = Math.max(s.guest_people|0, shimeiCount);
     const drinkSum = (s.drinks||[]).reduce((a,d)=>a + (d.amount|0), 0);
+    const activeWorkTab = (state.ui.work_tab === 'customer' || state.ui.work_tab === 'drink') ? state.ui.work_tab : 'set';
 
     setPaneEl.innerHTML = `
-        <div>
-          <span class="badge">開始 ${s.started_at || '—'}</span>
-          <span class="badge">終了 ${s.ends_at || '—'}</span>
-
-          <span class="badge">指名 ${shimeiCount}人</span>
-          <span class="badge">課金 ${charge}人</span>
-          <span class="badge">ドリンク ${drinkSum.toLocaleString()}円</span>
-        </div>  
+    <div class="setPaneTop">
+      <div>
+        <span class="badgeMini2">編集中 セット${idx + 1}</span>
+        <span class="badgeMini2">席 ${escapeHtml(seatLabelById(s.seat_id || 0))}</span>
+      </div>
+      <div class="muted">ここでは選んだセットの内容を編集します</div>
+    </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
           <div style="min-width:180px;">
-            <label style="margin:0 0 4px;">席</label>
-            <select id="seatSel">
+            <label style="margin:0 0 4px;">移動先の席</label>
+            <select id="seatMoveTargetSel">
               ${seatOptionsHtml(s.seat_id || 0)}
             </select>
           </div>
@@ -2645,105 +3158,148 @@ input:focus, select:focus{
 
       <div class="hr"></div>
 
-      <div class="row2">
-        <div>
+      <div class="cashierDashTabs" role="tablist" aria-label="会計作業切り替え">
+        <button
+          type="button"
+          class="cashierDashTab ${activeWorkTab === 'set' ? 'is-active' : ''}"
+          data-work-tab="set"
+          role="tab"
+          aria-selected="${activeWorkTab === 'set' ? 'true' : 'false'}"
+        >
+          <span class="cashierDashTabIcon">🪑</span>
+          <span class="cashierDashTabText">
+            <span class="cashierDashTabTitle">基本設定</span>
+            <span class="cashierDashTabMeta">人数・VIP・種別を編集</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          class="cashierDashTab ${activeWorkTab === 'customer' ? 'is-active' : ''}"
+          data-work-tab="customer"
+          role="tab"
+          aria-selected="${activeWorkTab === 'customer' ? 'true' : 'false'}"
+        >
+          <span class="cashierDashTabIcon">👥</span>
+          <span class="cashierDashTabText">
+            <span class="cashierDashTabTitle">客ごとのモード</span>
+            <span class="cashierDashTabMeta">FREE・指名の切替</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          class="cashierDashTab ${activeWorkTab === 'drink' ? 'is-active' : ''}"
+          data-work-tab="drink"
+          role="tab"
+          aria-selected="${activeWorkTab === 'drink' ? 'true' : 'false'}"
+        >
+          <span class="cashierDashTabIcon">🥃</span>
+          <span class="cashierDashTabText">
+            <span class="cashierDashTabTitle">ドリンク（都度追加）</span>
+            <span class="cashierDashTabMeta">評価先・金額・履歴</span>
+          </span>
+        </button>
+      </div>
 
-          <div class="guestLadiesRow">
-            <div class="guestBox">
-              <label>ゲスト人数（来店人数）</label>
-              <input type="number" id="guest_people" min="0" value="${s.guest_people}">
-            </div>
+      <div class="workTabPane ${activeWorkTab === 'set' ? 'active' : ''}" id="workPaneSet">
+        <div class="row2">
+          <div>
+            <div class="guestLadiesRow">
+              <div class="guestBox">
+                <label>ゲスト人数（来店人数）</label>
+                <input type="number" id="guest_people" min="0" value="${s.guest_people}">
+              </div>
 
-            <div class="ladiesBox">
-              <label class="small muted" style="display:flex; gap:8px; align-items:center; user-select:none; margin-bottom:6px;">
-                <input type="checkbox" id="ladies_enabled" class="chkMini"${ (s.ladies_people|0) > 0 ? 'checked' : '' }>
-                レディース料金
-              </label>
+              <div class="ladiesBox">
+                <label class="small muted" style="display:flex; gap:8px; align-items:center; user-select:none; margin-bottom:6px;">
+                  <input type="checkbox" id="ladies_enabled" class="chkMini"${ (s.ladies_people|0) > 0 ? 'checked' : '' }>
+                  レディース料金
+                </label>
 
-              <div id="ladiesWrap"
-                  style="display:${(s.ladies_people|0) > 0 ? 'flex' : 'none'}; gap:8px; align-items:center; flex-wrap:wrap;">
-                <span class="small muted">人数</span>
+                <div id="ladiesWrap"
+                    style="display:${(s.ladies_people|0) > 0 ? 'flex' : 'none'}; gap:8px; align-items:center; flex-wrap:wrap;">
+                  <span class="small muted">人数</span>
 
-                <div class="stepper">
-                  <button type="button" class="stepBtn" id="ladiesMinus">−</button>
-                  <input
-                    type="text"
-                    id="ladies_people"
-                    class="stepVal"
-                    value="${s.ladies_people||0}"
-                    readonly
-                    inputmode="numeric"
-                  >
-                  <button type="button" class="stepBtn" id="ladiesPlus">＋</button>
+                  <div class="stepper">
+                    <button type="button" class="stepBtn" id="ladiesMinus">−</button>
+                    <input
+                      type="text"
+                      id="ladies_people"
+                      class="stepVal"
+                      value="${s.ladies_people||0}"
+                      readonly
+                      inputmode="numeric"
+                    >
+                    <button type="button" class="stepBtn" id="ladiesPlus">＋</button>
+                  </div>
+
+                  <button type="button" class="btnMini" id="ladiesMax">MAX</button>
+                  <button type="button" class="btnMini" id="ladiesClear">0</button>
                 </div>
-
-                <button type="button" class="btnMini" id="ladiesMax">MAX</button>
-                <button type="button" class="btnMini" id="ladiesClear">0</button>
               </div>
             </div>
           </div>
-        </div>
 
-        <div>
-          <div class="row2">
-            <div>
-              <label>VIP（+10000）</label>
-              <select id="vip">
-                <option value="0" ${s.vip ? "" : "selected"}>OFF</option>
-                <option value="1" ${s.vip ? "selected" : ""}>ON</option>
-              </select>
-            </div>
+          <div>
+            <div class="row2">
+              <div>
+                <label>VIP（+10000）</label>
+                <select id="vip">
+                  <option value="0" ${s.vip ? "" : "selected"}>OFF</option>
+                  <option value="1" ${s.vip ? "selected" : ""}>ON</option>
+                </select>
+              </div>
 
-            <div>
-              <label>セット種別</label>
-              <select id="kindSel">
-                <option value="normal50" ${s.kind==='normal50'?'selected':''}>通常50分 7000</option>
-                <option value="half25" ${s.kind==='half25'?'selected':''}>ハーフ25分 3500</option>
-                <option value="pack_douhan" ${s.kind==='pack_douhan'?'selected':''} ${idx>=1?'disabled':''}>同伴パック 20:00-21:30 13000</option>
-              </select>
+              <div>
+                <label>セット種別</label>
+                <select id="kindSel">
+                  <option value="normal50" ${s.kind==='normal50'?'selected':''}>通常50分 7000</option>
+                  <option value="half25" ${s.kind==='half25'?'selected':''}>ハーフ25分 3500</option>
+                  <option value="pack_douhan" ${s.kind==='pack_douhan'?'selected':''} ${idx>=1?'disabled':''}>同伴 13000</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="hr"></div>
+      <div class="workTabPane ${activeWorkTab === 'customer' ? 'active' : ''}" id="workPaneCustomer">
+        <h2>客ごとのモード</h2>
+        <div class="muted small">FREE=席付き / 指名=客ごと（○→★→解除）</div>
+        <div class="tabs wrap" id="custTabs"></div>
+        <div class="pane" id="custPane"></div>
+      </div>
 
-      <h2>客ごとのモード</h2>
-      <div class="muted small">FREE=席付き / 指名=客ごと（○→★→解除）</div>
-      <div class="tabs wrap" id="custTabs"></div>
-      <div class="pane" id="custPane"></div>
-
-      <div class="hr"></div>
-
-      <h2>ドリンク（都度追加）</h2>
-      <div class="muted small" id="currentAssignHint"></div>
+      <div class="workTabPane ${activeWorkTab === 'drink' ? 'active' : ''}" id="workPaneDrink">
+        <h2>ドリンク（都度追加）</h2>
+        <div class="muted small" id="currentAssignHint"></div>
         <div>
           <label>評価先</label>
           <select id="payer_select"></select>
           <div class="muted small" style="margin-top:6px;">※ 今最後に付いてる人が最上段に出ます</div>
         </div>
-      <div class="drinkRowTight">
-        <div>
-        <label>金額（税別）</label>
-        <div class="amtRow">
-          <input type="number" id="drink_amount" class="amtInput" min="0" value="0" inputmode="numeric">
-          <div class="amtBtns">
-            <button type="button" class="btnAmt" id="btnAmt1000">+1000</button>
-            <button type="button" class="btnAmt" id="btnAmt1500">+1500</button>
-            <button type="button" class="btnAmt" id="btnAmtClear">クリア</button>
+        <div class="drinkRowTight">
+          <div>
+            <label>金額（税別）</label>
+            <div class="amtRow">
+              <input type="number" id="drink_amount" class="amtInput" min="0" value="0" inputmode="numeric">
+              <div class="amtBtns">
+                <button type="button" class="btnAmt" id="btnAmt1000">+1000</button>
+                <button type="button" class="btnAmt" id="btnAmt1500">+1500</button>
+                <button type="button" class="btnAmt" id="btnAmtClear">クリア</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label>操作</label>
+            <button type="button" class="btn b-green" id="addDrinkBtn">+ ドリンク追加</button>
           </div>
         </div>
-      </div>
-        <div>
-          <label>操作</label>
-          <button type="button" class="btn b-green" id="addDrinkBtn">+ ドリンク追加</button>
-        </div>
-      </div>
 
-      <div class="hr"></div>
+        <div class="hr"></div>
 
-      <h2>このセットのドリンク一覧</h2>
-      <div id="drinkList"></div>
+        <h2>このセットのドリンク一覧</h2>
+        <div id="drinkList"></div>
+      </div>
     `;
 
     document.getElementById('delSetBtn').addEventListener('click', ()=>{
@@ -2755,17 +3311,10 @@ input:focus, select:focus{
       requestSilentSave('set_remove');
     });
 
-    const seatSel = document.getElementById('seatSel');
-    if (seatSel){
-      seatSel.addEventListener('change', (e)=>{
-        setSeatId(idx, e.target.value);
-      });
-    }
-
     const seatMoveBtn = document.getElementById('seatMoveBtn');
     if (seatMoveBtn){
       seatMoveBtn.addEventListener('click', ()=>{
-        const seatId = Number((document.getElementById('seatSel')?.value) || 0);
+        const seatId = Number((document.getElementById('seatMoveTargetSel')?.value) || 0);
         seatMoveAsNewSet(idx, seatId);
       });
     }
@@ -2773,6 +3322,9 @@ input:focus, select:focus{
     document.getElementById('guest_people').addEventListener('change', (e)=> setGuestPeople(idx, e.target.value));
     document.getElementById('vip').addEventListener('change', (e)=> setVip(idx, e.target.value === '1'));
     document.getElementById('kindSel').addEventListener('change', (e)=> setKindForSet(idx, e.target.value));
+    setPaneEl.querySelectorAll('[data-work-tab]').forEach(btn=>{
+      btn.addEventListener('click', ()=> selectWorkTab(btn.getAttribute('data-work-tab') || 'set'));
+    });
     // =========================
     // レディース ステッパー
     // =========================
