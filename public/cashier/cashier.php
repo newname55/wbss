@@ -604,13 +604,6 @@ input:focus, select:focus{
   font-size: 10px;
 }
 
-.compactCard .setSummaryBar{
-  margin: 6px 0 8px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  gap:6px;
-}
-
 .compactCard .timerBox{
   padding: 8px 10px;
   border-radius: 12px;
@@ -902,20 +895,6 @@ input:focus, select:focus{
 }
 .key{ font-weight:1000; }
 
-/* セットサマリ */
-.setSummaryBar{
-  margin: 6px 0 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #fff;
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-  align-items:center;
-}
-.setSummaryBar .badgeMini{ margin-right: 0; }
-
 /* ===== ドリンク金額 input + ボタン ===== */
 .amtRow{
   display:flex;
@@ -1180,7 +1159,6 @@ input:focus, select:focus{
         </div>
 
         <div id="globalQuickTools"></div>
-        <div id="currentSetSummary" class="setSummaryBar"></div>
 
         <div class="grid4 compactGrid">
           <div class="blockSafe blockBlue">
@@ -1385,7 +1363,6 @@ input:focus, select:focus{
   const serverErrCard    = document.getElementById('serverErrCard');
   const serverErrEl      = document.getElementById('serverErr');
   
-  const currentSetSummaryEl = document.getElementById('currentSetSummary');
   const globalQuickToolsEl = document.getElementById('globalQuickTools');
   
   function setFreePhase(setIndex, custNo, phase){
@@ -2893,34 +2870,6 @@ input:focus, select:focus{
     const idx = state.ui.selected_set_index;
     const s = state.sets[idx];
     renderGlobalQuickTools(s, idx);
-    // ✅ 選択中セット概要バー更新
-    if (currentSetSummaryEl && s){
-      let shMap = {};
-      for (let c=1;c<= (s.guest_people|0); c++){
-        const cust = s.customers[String(c)];
-        if (!cust) continue;
-        if (cust.mode === 'shimei' && cust.shimei){
-          Object.keys(cust.shimei).forEach(no=>{
-            if (shMap[no] === 'hon') return;
-            shMap[no] = cust.shimei[no] === 'hon' ? 'hon' : 'jounai';
-          });
-        }
-      }
-
-      const shimeiCount = Object.keys(shMap).length;
-      const charge = Math.max(s.guest_people|0, shimeiCount);
-      const drinkSum = (s.drinks||[]).reduce((a,d)=>a + (d.amount|0), 0);
-
-      currentSetSummaryEl.innerHTML = `
-        <span class="badgeMini">開始 <b>${s.started_at || '—'}</b></span>
-        <span class="badgeMini">終了 <b>${s.ends_at || '—'}</b></span>
-        <span class="badgeMini">kind <b>${escapeHtml(String(s.kind || 'normal50'))}</b></span>
-        <span class="badgeMini">席 <b>${escapeHtml(seatLabelById(s.seat_id || 0))}</b></span>
-        <span class="badgeMini">指名 <b>${shimeiCount}</b>人</span>
-        <span class="badgeMini">課金 <b>${charge}</b>人</span>
-        <span class="badgeMini">ドリンク <b>${drinkSum.toLocaleString()}</b>円</span>
-      `;
-    }
     if (!s) { setPaneEl.innerHTML = `<div class="muted">セットがありません</div>`; return; }
 
     normalizeCustomers(s);
