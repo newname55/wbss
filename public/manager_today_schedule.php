@@ -1632,13 +1632,24 @@ render_header('本日の勤務予定', [
   content:"-";
 }
 .mobileSimpleBoard{
-  display:none;
+  display:block;
   margin-top:14px;
 }
 .mobileSimpleGrid{
   display:grid;
-  grid-template-columns:repeat(3, minmax(0, 1fr));
-  gap:8px;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:10px;
+}
+@media (max-width: 1180px){
+  .mobileSimpleGrid{
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:8px;
+  }
+}
+@media (max-width: 820px){
+  .mobileSimpleGrid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
 }
 .mobileSimpleCard{
   display:grid;
