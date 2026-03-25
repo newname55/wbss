@@ -224,69 +224,32 @@ function store_decommission_table_kind(PDO $pdo, string $table): ?string
 function store_decommission_delete_allowlist(): array
 {
   return [
-    // 会計/注文
+    // 会計/注文: 店舗業務の中核データのみ
     'order_item_cast_assignments',
-    'order_items',
-    'orders',
     'ticket_items',
-    'ticket_payments',
-    'ticket_receipt_jobs',
-    'ticket_headers',
     'ticket_seat_moves',
     'tickets',
     'visit_ticket_links',
     'visits',
     'visit_nomination_events',
 
-    // 顧客
-    'customer_cast_links',
+    // 顧客: 正本と補助ログに限定
     'customer_notes',
-    'customer_contacts',
-    'customer_dates',
-    'customer_memberships',
-    'customer_merge_logs',
-    'customer_metrics',
-    'customer_profiles',
-    'customer_tags',
     'customers',
 
-    // 勤怠/シフト
+    // 勤怠/シフト: 正本と申請/計画ログに限定
     'attendance_audits',
-    'attendance_logs',
-    'attendance_notice_logs',
-    'attendance_shifts',
     'attendances',
     'cast_shift_logs',
     'cast_shift_plans',
     'cast_shift_requests',
     'cast_week_plans',
-    'shift_schedules',
 
-    // 連携/通知/メッセージ
-    'invite_tokens',
-    'line_cast_replies',
+    // 最小限の連携補助
     'line_geo_pending',
-    'line_notice_actions',
-    'line_notice_logs',
-    'line_notice_replies',
-    'messages',
-    'push_subscriptions',
 
-    // イベント/移送
-    'event_entries',
-    'events',
-    'event_metrics_daily',
-    'event_schedules',
-    'rides',
+    // 店舗イベント/監査補助
     'store_event_audit_logs',
-    'store_event_instances',
-    'store_event_metric_defs',
-    'store_events',
-    'store_external_events',
-    'store_transport_bases',
-    'transport_route_jobs',
-    'transport_route_plans',
-    'transport_route_stops',
 
     // 応募/面接
     'applicants',
@@ -295,32 +258,6 @@ function store_decommission_delete_allowlist(): array
     'wbss_applicant_photos',
     'wbss_applicant_status_logs',
     'wbss_applicant_store_assignments',
-
-    // 店舗内マスタ/設定
-    'order_menus',
-    'order_menu_categories',
-    'order_orders',
-    'order_order_items',
-    'order_tables',
-    'stock_categories',
-    'stock_inventory_lines',
-    'stock_inventory_sessions',
-    'stock_items',
-    'stock_item_locations',
-    'stock_locations',
-    'stock_moves',
-    'stock_product_price_history',
-    'stock_products',
-    'store_business_overrides',
-    'store_cast_history',
-    'store_closures',
-    'store_daily_metrics',
-    'store_printers',
-    'store_shift_time_presets',
-    'store_weekly_closed_days',
-    'ticket_sequences',
-    'ticket_shimei_events',
-    'wage_rates',
   ];
 }
 
