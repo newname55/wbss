@@ -306,7 +306,7 @@ body{
 /* ====== Action Bar ====== */
 .actionGrid{
   display:grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin-top: 8px;
 }
@@ -424,14 +424,14 @@ body{
 
 .globalActionRow{
   display:grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap:8px;
 }
 @media (max-width: 1024px){
-  .globalActionRow{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .globalActionRow{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 640px){
-  .globalActionRow{ grid-template-columns: 1fr; }
+  .globalActionRow{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ✅ labelは統一（重複削除） */
@@ -605,12 +605,12 @@ input:focus, select:focus{
 }
 
 .compactCard .timerBox{
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-radius: 12px;
 }
 
 .compactCard .timerBig{
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1.1;
 }
 
@@ -654,6 +654,54 @@ input:focus, select:focus{
 .quickHint{
   font-size: 10px;
   color: var(--muted);
+}
+
+.compactTimeGrid{
+  align-items:stretch;
+}
+
+.compactTimeGrid .blockSafe{
+  min-height: 0;
+}
+
+.compactField{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.compactField .muted{
+  min-height: 0;
+}
+
+.timerMini{
+  display:grid;
+  gap:2px;
+}
+
+.timerMiniTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+}
+
+.timerMiniMeta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.actionPair{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:8px;
+}
+
+.actionPair .btn{
+  min-width:0;
 }
 
 /* ====== Right column sticky ====== */
@@ -1135,8 +1183,6 @@ input:focus, select:focus{
       <div class="actionGrid">
         <a class="btn b-dark" href="/wbss/public/dashboard.php">ダッシュボード</a>
         <a class="btn b-blue" href="/wbss/public/cashier/index.php?store_id=<?= (int)$storeId ?>">新 会計一覧</a>
-        <button type="button" class="btn b-dark" id="saveBtnTop">保存（DB）</button>
-        <button class="btn b-red" type="button" id="closeBtn">会計（チェック）</button>
       </div>
 
       <div class="muted" style="margin-top:8px;">
@@ -1160,32 +1206,36 @@ input:focus, select:focus{
 
         <div id="globalQuickTools"></div>
 
-        <div class="grid4 compactGrid">
-          <div class="blockSafe blockBlue">
+        <div class="grid4 compactGrid compactTimeGrid">
+          <div class="blockSafe blockBlue compactField">
             <label>開始時刻（セット1の開始）</label>
             <input type="time" id="start_time" value="20:00" step="60">
             <div class="muted">※同伴は 20:00固定</div>
           </div>
 
-          <div class="blockSafe blockYellow">
+          <div class="blockSafe blockYellow compactField">
             <label>割引（税別・円）</label>
             <input type="number" id="discount" min="0" value="0" inputmode="numeric">
             <div class="muted">※入れ間違い防止：マイナス不可</div>
           </div>
 
-          <div class="blockSafe blockGreen">
+          <div class="blockSafe blockGreen compactField">
             <label>タイマー</label>
-            <div class="timerBox">
-              <div class="muted" id="timerInfo">未開始</div>
-              <div class="timerBig" id="timerRemain">—</div>
-              <div class="muted" id="timerEnds">—</div>
+            <div class="timerBox timerMini">
+              <div class="timerMiniTop">
+                <div class="muted" id="timerInfo">未開始</div>
+                <div class="timerBig" id="timerRemain">—</div>
+              </div>
+              <div class="timerMiniMeta">
+                <span id="timerEnds">—</span>
+              </div>
               <div class="warnBox" id="warnBox">交渉時間</div>
             </div>
           </div>
 
-          <div class="blockSafe blockPurple">
+          <div class="blockSafe blockPurple compactField">
             <label>操作</label>
-            <div style="display:grid;gap:10px;">
+            <div class="actionPair">
               <button type="button" class="btn b-green" id="startBtn">▶ スタート</button>
               <button type="button" class="btn b-orange" id="stopBtn">■ 停止</button>
             </div>
@@ -1196,6 +1246,7 @@ input:focus, select:focus{
             <button type="button" class="btn b-blue" id="addSetBtn">+ 延長</button>
             <button class="btn b-green" type="button" id="previewBtn">プレビュー</button>
             <button class="btn b-dark" type="button" id="freeHistBtn">FREE履歴</button>
+            <button class="btn b-red" type="button" id="closeBtn">会計（チェック）</button>
           </div>
 
           <div class="full muted">
@@ -1382,7 +1433,7 @@ input:focus, select:focus{
     return `
       <option value="normal50" ${selectedKind==='normal50'?'selected':''}>通常50分 7000</option>
       <option value="half25" ${selectedKind==='half25'?'selected':''}>ハーフ25分 3500</option>
-      <option value="pack_douhan" ${selectedKind==='pack_douhan'?'selected':''} ${idx>=1?'disabled':''}>同伴パック 20:00-21:30 13000</option>
+      <option value="pack_douhan" ${selectedKind==='pack_douhan'?'selected':''} ${idx>=1?'disabled':''}>同伴 13000</option>
     `;
   }
 
@@ -1505,7 +1556,7 @@ input:focus, select:focus{
   const KIND = {
     normal50:   { price: 7000, dur: 50, label:'通常50分(7000)' },
     half25:     { price: 3500, dur: 25, label:'ハーフ25分(3500)' },
-    pack_douhan:{ price:13000, dur: 90, label:'同伴パック(20:00-21:30 13000)' },
+    pack_douhan:{ price:13000, dur: 90, label:'同伴 13000' },
   };
   const PACK_START = "20:00";
   const PACK_END   = "21:30";
@@ -2898,19 +2949,11 @@ input:focus, select:focus{
     const activeWorkTab = (state.ui.work_tab === 'customer' || state.ui.work_tab === 'drink') ? state.ui.work_tab : 'set';
 
     setPaneEl.innerHTML = `
-        <div>
-          <span class="badge">開始 ${s.started_at || '—'}</span>
-          <span class="badge">終了 ${s.ends_at || '—'}</span>
-
-          <span class="badge">指名 ${shimeiCount}人</span>
-          <span class="badge">課金 ${charge}人</span>
-          <span class="badge">ドリンク ${drinkSum.toLocaleString()}円</span>
-        </div>  
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
           <div style="min-width:180px;">
-            <label style="margin:0 0 4px;">席（詳細）</label>
-            <select id="seatSel">
+            <label style="margin:0 0 4px;">移動先の席</label>
+            <select id="seatMoveTargetSel">
               ${seatOptionsHtml(s.seat_id || 0)}
             </select>
           </div>
@@ -3019,7 +3062,7 @@ input:focus, select:focus{
                 <select id="kindSel">
                   <option value="normal50" ${s.kind==='normal50'?'selected':''}>通常50分 7000</option>
                   <option value="half25" ${s.kind==='half25'?'selected':''}>ハーフ25分 3500</option>
-                  <option value="pack_douhan" ${s.kind==='pack_douhan'?'selected':''} ${idx>=1?'disabled':''}>同伴パック 20:00-21:30 13000</option>
+                  <option value="pack_douhan" ${s.kind==='pack_douhan'?'selected':''} ${idx>=1?'disabled':''}>同伴 13000</option>
                 </select>
               </div>
             </div>
@@ -3076,17 +3119,10 @@ input:focus, select:focus{
       requestSilentSave('set_remove');
     });
 
-    const seatSel = document.getElementById('seatSel');
-    if (seatSel){
-      seatSel.addEventListener('change', (e)=>{
-        setSeatId(idx, e.target.value);
-      });
-    }
-
     const seatMoveBtn = document.getElementById('seatMoveBtn');
     if (seatMoveBtn){
       seatMoveBtn.addEventListener('click', ()=>{
-        const seatId = Number((document.getElementById('seatSel')?.value) || 0);
+        const seatId = Number((document.getElementById('seatMoveTargetSel')?.value) || 0);
         seatMoveAsNewSet(idx, seatId);
       });
     }
