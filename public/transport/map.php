@@ -79,7 +79,7 @@ render_header('送迎マップ', [
   'right_html' => $rightHtml,
 ]);
 ?>
-<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327h">
+<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327j">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="">
@@ -243,10 +243,19 @@ render_header('送迎マップ', [
       <article class="transportPanel transportMapMetaCard">
         <div class="transportMapMetaHead">
           <div class="cardTitle">ドライバー別件数</div>
-          <div class="muted">未割当判断の補助</div>
+          <div class="muted">未割当判断と表示切替</div>
         </div>
         <div class="transportMapChipList" data-driver-summary>
           <span class="transportMapEmptyInline">読み込み待ちです</span>
+        </div>
+        <div class="transportMapDriverVisibility">
+          <div class="transportMapDriverVisibilityHead">
+            <span class="transportMapMiniHint">地図表示のON / OFF</span>
+            <span class="transportMapMiniHint" data-vehicle-updated>車両更新 待機中</span>
+          </div>
+          <div class="transportMapDriverToggleList" data-driver-toggles>
+            <span class="transportMapEmptyInline">車両送信が始まると切替できます</span>
+          </div>
         </div>
       </article>
     </section>
@@ -295,5 +304,5 @@ window.WBSS_TRANSPORT_MAP_CONFIG = <?= json_encode([
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-<script src="/wbss/public/assets/js/transport-map.js?v=20260327i"></script>
+<script src="/wbss/public/assets/js/transport-map.js?v=20260327j"></script>
 <?php render_page_end(); ?>
