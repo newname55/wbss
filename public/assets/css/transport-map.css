@@ -10,6 +10,52 @@
   padding-bottom:28px;
 }
 
+.transportMapScreenTopBar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:6px 4px 0;
+}
+
+.transportMapScreenTopBarMain{
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+
+.transportMapScreenTopBarTitle{
+  font-size:16px;
+  font-weight:1000;
+  color:#0f172a;
+  line-height:1.1;
+}
+
+.transportMapScreenTopBarMeta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  color:#64748b;
+  font-size:12px;
+  font-weight:700;
+}
+
+.transportMapScreenTopBarMeta span{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 8px;
+  border-radius:999px;
+  background:rgba(255,255,255,.72);
+  border:1px solid rgba(15,23,42,.08);
+}
+
+.transportMapScreenTopBarActions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
 .transportMapScreenTop{
   padding:18px;
   display:grid;
@@ -928,6 +974,20 @@ body[data-theme="staff"] .transportMapScreenTitle{
   color:var(--txt);
 }
 
+body[data-theme="dark"] .transportMapScreenTopBarTitle,
+body[data-theme="cast"] .transportMapScreenTopBarTitle,
+body[data-theme="staff"] .transportMapScreenTopBarTitle{
+  color:var(--txt);
+}
+
+body[data-theme="dark"] .transportMapScreenTopBarMeta span,
+body[data-theme="cast"] .transportMapScreenTopBarMeta span,
+body[data-theme="staff"] .transportMapScreenTopBarMeta span{
+  background:color-mix(in srgb, var(--cardA) 94%, transparent);
+  border-color:var(--line);
+  color:var(--muted);
+}
+
 body[data-theme="dark"] .transportMapDriverVisibility--screen,
 body[data-theme="cast"] .transportMapDriverVisibility--screen,
 body[data-theme="staff"] .transportMapDriverVisibility--screen{
@@ -1009,6 +1069,11 @@ body[data-theme="staff"] .transportMapDriverToggle{
 
   .transportMapScreenActions{
     justify-content:flex-start;
+  }
+
+  .transportMapScreenTopBar{
+    flex-direction:column;
+    align-items:flex-start;
   }
 }
 

@@ -47,19 +47,7 @@ $pageConfig = [
   'focusCastId' => 0,
 ];
 
-$rightHtml = '';
-if ($selectedStoreId > 0) {
-  $rightHtml .= '<a class="btn" href="/wbss/public/transport/map.php?store_id=' . (int)$selectedStoreId . '&business_date=' . urlencode($businessDate) . '">通常表示</a> ';
-  $rightHtml .= '<a class="btn" href="/wbss/public/transport/driver_location.php?store_id=' . (int)$selectedStoreId . '">現在地送信</a>';
-}
-
 render_page_start('送迎マップ TV');
-render_header('送迎マップ TV', [
-  'back_href' => $selectedStoreId > 0 ? '/wbss/public/transport/map.php?store_id=' . (int)$selectedStoreId . '&business_date=' . urlencode($businessDate) : '/wbss/public/dashboard.php',
-  'back_label' => '← 通常マップへ',
-  'right_html' => $rightHtml,
-  'show_user' => false,
-]);
 ?>
 <link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327k">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
@@ -68,6 +56,23 @@ render_header('送迎マップ TV', [
 
 <div class="page">
   <div class="admin-wrap transportMapPage transportMapScreenPage">
+    <section class="transportMapScreenTopBar">
+      <div class="transportMapScreenTopBarMain">
+        <div class="transportMapScreenTopBarTitle">送迎マップ TV</div>
+        <div class="transportMapScreenTopBarMeta">
+          <span><?= h($storeName !== '' ? $storeName : '-') ?></span>
+          <span><?= h($businessDate !== '' ? $businessDate : '-') ?></span>
+          <span>60秒ごと更新</span>
+        </div>
+      </div>
+      <div class="transportMapScreenTopBarActions">
+        <a class="miniBtn" href="<?= h($selectedStoreId > 0 ? '/wbss/public/transport/map.php?store_id=' . (int)$selectedStoreId . '&business_date=' . urlencode($businessDate) : '/wbss/public/dashboard.php') ?>">通常表示</a>
+        <?php if ($selectedStoreId > 0): ?>
+          <a class="miniBtn" href="/wbss/public/transport/driver_location.php?store_id=<?= (int)$selectedStoreId ?>">現在地送信</a>
+        <?php endif; ?>
+      </div>
+    </section>
+
     <?php if ($err !== ''): ?>
       <div class="card transportMapAlert transportMapAlertError"><?= h($err) ?></div>
     <?php endif; ?>
