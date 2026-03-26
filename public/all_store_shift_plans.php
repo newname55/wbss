@@ -358,6 +358,8 @@ unset($row);
 $prevDate = (new DateTimeImmutable($targetDate, new DateTimeZone('Asia/Tokyo')))->modify('-1 day')->format('Y-m-d');
 $nextDate = (new DateTimeImmutable($targetDate, new DateTimeZone('Asia/Tokyo')))->modify('+1 day')->format('Y-m-d');
 $todayDate = $defaultDate;
+$yesterdayDate = (new DateTimeImmutable($todayDate, new DateTimeZone('Asia/Tokyo')))->modify('-1 day')->format('Y-m-d');
+$tomorrowDate = (new DateTimeImmutable($todayDate, new DateTimeZone('Asia/Tokyo')))->modify('+1 day')->format('Y-m-d');
 
 $pageTitle = '全店出勤予定ビュー';
 $dashboardUrl = '/wbss/public/dashboard.php?store_id=' . $storeId;
@@ -647,9 +649,9 @@ body[data-theme="cast"] .date-nav .date-btn.is-active{
 
       <div class="date-row">
         <div class="date-nav">
-          <a class="btn date-btn <?= $targetDate === $prevDate ? 'is-active' : '' ?>" href="/wbss/public/all_store_shift_plans.php?store_id=<?= $storeId ?>&date=<?= h($prevDate) ?>">前日</a>
+          <a class="btn date-btn <?= $targetDate === $yesterdayDate ? 'is-active' : '' ?>" href="/wbss/public/all_store_shift_plans.php?store_id=<?= $storeId ?>&date=<?= h($prevDate) ?>">前日</a>
           <a class="btn date-btn <?= $targetDate === $todayDate ? 'is-active' : '' ?>" href="/wbss/public/all_store_shift_plans.php?store_id=<?= $storeId ?>&date=<?= h($todayDate) ?>">今日</a>
-          <a class="btn date-btn <?= $targetDate === $nextDate ? 'is-active' : '' ?>" href="/wbss/public/all_store_shift_plans.php?store_id=<?= $storeId ?>&date=<?= h($nextDate) ?>">翌日</a>
+          <a class="btn date-btn <?= $targetDate === $tomorrowDate ? 'is-active' : '' ?>" href="/wbss/public/all_store_shift_plans.php?store_id=<?= $storeId ?>&date=<?= h($nextDate) ?>">翌日</a>
         </div>
 
         <div class="quick-links">
