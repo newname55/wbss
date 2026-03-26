@@ -9,10 +9,12 @@ store_decommission_require_manage_role();
 $pdo = db();
 $stores = store_decommission_manageable_stores($pdo);
 $requestedStoreId = (int)($_GET['store_id'] ?? $_POST['store_id'] ?? 0);
+$requestedBatchId = (int)($_GET['batch_id'] ?? $_POST['batch_id'] ?? 0);
 $storeId = store_decommission_resolve_store_id($pdo, $requestedStoreId);
 $flash = '';
 $error = '';
 $actorUserId = (int)(current_user_id() ?? 0);
+$selectedBatchId = $requestedBatchId;
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
   try {
@@ -48,6 +50,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     } elseif ($uiAction === 'export') {
       store_decommission_export($pdo, (int)($_POST['job_id'] ?? 0), $actorUserId);
       $flash = '最終エクスポートを作成しました。';
+    } elseif ($uiAction === 'batch_create') {
+      $batch = store_decommission_create_batch(
+        $pdo,
+        (array)($_POST['store_ids'] ?? []),
+        $actorUserId,
+        (string)($_POST['password'] ?? ''),
+        trim((string)($_POST['reason'] ?? '')),
+        trim((string)($_POST['scheduled_at'] ?? '')) !== '' ? trim((string)$_POST['scheduled_at']) : null,
+        !empty($_POST['dry_run'])
+      );
+      $selectedBatchId = (int)($batch['batch_id'] ?? 0);
+      $flash = '複数店舗 batch を作成しました。';
     }
   } catch (Throwable $e) {
     $error = $e->getMessage();
@@ -61,6 +75,23 @@ $summary = $status['summary'];
 $logs = $status['logs'];
 $storeName = (string)($store['name'] ?? ('#' . $storeId));
 $lifecycle = (string)($store['lifecycle_status'] ?? 'active');
+$batches = store_decommission_list_batches($pdo, 20);
+if ($selectedBatchId <= 0 && $batches) {
+  $selectedBatchId = (int)($batches[0]['id'] ?? 0);
+}
+$selectedBatchPayload = null;
+if ($selectedBatchId > 0) {
+  try {
+    $selectedBatchPayload = store_decommission_batch_progress($pdo, $selectedBatchId);
+  } catch (Throwable $e) {
+    if ($error === '') {
+      $error = $e->getMessage();
+    }
+  }
+}
+$selectedBatch = is_array($selectedBatchPayload) ? ($selectedBatchPayload['batch'] ?? null) : null;
+$selectedBatchJobs = is_array($selectedBatchPayload) ? ($selectedBatchPayload['jobs'] ?? []) : [];
+$selectedBatchProgress = is_array($selectedBatchPayload) ? ($selectedBatchPayload['progress'] ?? null) : null;
 
 render_page_start('店舗解約・データ廃棄');
 render_header('店舗解約・データ廃棄', [
@@ -111,6 +142,138 @@ render_header('店舗解約・データ廃棄', [
         <div class="store-switch-help">`active → suspended → decommissioning → decommissioned` の順で進みます。</div>
       </div>
     </form>
+  </section>
+
+  <div class="store-dec__grid">
+    <section class="dash-section store-dec-panel">
+      <div class="dash-section-head">
+        <div>
+          <h2>複数店舗 batch 作成</h2>
+          <p>複数店舗を一括登録し、runner は各 store ごとのジョブとして順に実行します。</p>
+        </div>
+      </div>
+      <form method="post" class="store-dec__form">
+        <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+        <input type="hidden" name="store_id" value="<?= (int)$storeId ?>">
+        <input type="hidden" name="ui_action" value="batch_create">
+        <label>対象店舗
+          <select class="sel store-dec-multiselect" name="store_ids[]" multiple size="<?= max(6, min(10, count($stores))) ?>">
+            <?php foreach ($stores as $batchStore): ?>
+              <?php $batchStoreId = (int)($batchStore['id'] ?? 0); ?>
+              <option value="<?= $batchStoreId ?>" <?= $batchStoreId === $storeId ? 'selected' : '' ?>>
+                <?= h((string)($batchStore['name'] ?? ('#' . $batchStoreId))) ?> (#<?= $batchStoreId ?>)
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label>scheduled_at
+          <input class="input" name="scheduled_at" value="<?= h(date('Y-m-d H:i:s', strtotime('+5 minutes'))) ?>" placeholder="2026-03-28 03:00:00">
+        </label>
+        <label>理由
+          <textarea class="input" name="reason" rows="3">複数店舗の閉店処理</textarea>
+        </label>
+        <label>パスワード再入力
+          <input class="input" type="password" name="password" autocomplete="current-password">
+        </label>
+        <label class="store-dec-check">
+          <input type="checkbox" name="dry_run" value="1">
+          <span>dry-run として登録する</span>
+        </label>
+        <button type="submit" class="btn btn-danger">batch 作成</button>
+      </form>
+    </section>
+
+    <section class="dash-section store-dec-panel">
+      <div class="dash-section-head">
+        <div>
+          <h2>batch 進捗</h2>
+          <p>batch 単位の進捗を見つつ、実処理は必ず各 store の `store_id` 条件で走ります。</p>
+        </div>
+      </div>
+      <?php if ($selectedBatch && $selectedBatchProgress): ?>
+        <div class="store-dec-jobbar">
+          <span>batch #<?= (int)$selectedBatch['id'] ?></span>
+          <span>status: <b><?= h((string)$selectedBatchProgress['status']) ?></b></span>
+          <span>stores: <b><?= (int)$selectedBatchProgress['store_count'] ?></b></span>
+          <span><?= !empty($selectedBatch['dry_run']) ? 'dry-run' : 'execute' ?></span>
+        </div>
+        <div class="store-dec-progress">
+          <div class="store-dec-progress__bar">
+            <span style="width:<?= (int)$selectedBatchProgress['progress_percent'] ?>%"></span>
+          </div>
+          <div class="store-dec-progress__meta">
+            <span><?= (int)$selectedBatchProgress['progress_percent'] ?>%</span>
+            <span>完了系 <?= (int)$selectedBatchProgress['terminal_jobs'] ?>/<?= (int)$selectedBatchProgress['total_jobs'] ?></span>
+            <span>failed <?= (int)$selectedBatchProgress['failed_jobs'] ?></span>
+            <span>dry-run 完了 <?= (int)$selectedBatchProgress['dry_run_completed_jobs'] ?></span>
+          </div>
+        </div>
+        <table class="kv">
+          <tr><th>scheduled_at</th><td><?= h((string)($selectedBatch['scheduled_at'] ?? '')) ?: '—' ?></td></tr>
+          <tr><th>started_at</th><td><?= h((string)($selectedBatch['started_at'] ?? '')) ?: '—' ?></td></tr>
+          <tr><th>completed_at</th><td><?= h((string)($selectedBatch['completed_at'] ?? '')) ?: '—' ?></td></tr>
+          <tr><th>reason</th><td><?= h((string)($selectedBatch['reason'] ?? '')) ?: '—' ?></td></tr>
+        </table>
+        <table class="list">
+          <thead>
+            <tr>
+              <th>store</th>
+              <th>job</th>
+              <th>status</th>
+              <th>scheduled_at</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($selectedBatchJobs as $batchJob): ?>
+              <tr>
+                <td><?= h((string)($batchJob['store_name'] ?? ('#' . (int)($batchJob['store_id'] ?? 0)))) ?> (#<?= (int)($batchJob['store_id'] ?? 0) ?>)</td>
+                <td>#<?= (int)($batchJob['id'] ?? 0) ?></td>
+                <td><?= h((string)($batchJob['status'] ?? '')) ?></td>
+                <td><?= h((string)($batchJob['scheduled_at'] ?? '')) ?: '—' ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      <?php else: ?>
+        <div class="muted">まだ batch はありません。</div>
+      <?php endif; ?>
+    </section>
+  </div>
+
+  <section class="dash-section store-dec-panel">
+    <div class="dash-section-head">
+      <div>
+        <h2>batch 一覧</h2>
+        <p>直近 batch の状態と進捗率を一覧で確認できます。</p>
+      </div>
+    </div>
+    <?php if (!$batches): ?>
+      <div class="muted">batch はまだありません。</div>
+    <?php else: ?>
+      <table class="list">
+        <thead>
+          <tr>
+            <th>batch</th>
+            <th>status</th>
+            <th>stores</th>
+            <th>進捗</th>
+            <th>scheduled_at</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($batches as $batchRow): ?>
+            <?php $progress = (array)($batchRow['_progress'] ?? []); ?>
+            <tr>
+              <td><a href="?store_id=<?= (int)$storeId ?>&batch_id=<?= (int)($batchRow['id'] ?? 0) ?>">#<?= (int)($batchRow['id'] ?? 0) ?></a></td>
+              <td><?= h((string)($progress['status'] ?? $batchRow['status'] ?? '')) ?></td>
+              <td><?= (int)($progress['store_count'] ?? 0) ?></td>
+              <td><?= (int)($progress['progress_percent'] ?? 0) ?>%</td>
+              <td><?= h((string)($batchRow['scheduled_at'] ?? '')) ?: '—' ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    <?php endif; ?>
   </section>
 
   <div class="store-dec__grid">
@@ -386,6 +549,14 @@ render_header('店舗解約・データ廃棄', [
     gap:6px;
     font-size:13px;
   }
+  .store-dec-multiselect{
+    min-height:180px;
+  }
+  .store-dec-check{
+    display:flex !important;
+    align-items:center;
+    gap:8px;
+  }
   .kv{
     width:100%;
     border-collapse:collapse;
@@ -415,6 +586,29 @@ render_header('店舗解約・データ廃棄', [
     background:rgba(255,255,255,.03);
     color:var(--muted);
     font-size:13px;
+  }
+  .store-dec-progress{
+    margin:12px 0 14px;
+  }
+  .store-dec-progress__bar{
+    height:12px;
+    border-radius:999px;
+    background:rgba(255,255,255,.08);
+    overflow:hidden;
+  }
+  .store-dec-progress__bar span{
+    display:block;
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg, #f59e0b, #22c55e);
+  }
+  .store-dec-progress__meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:8px;
+    color:var(--muted);
+    font-size:12px;
   }
   .list{
     width:100%;
