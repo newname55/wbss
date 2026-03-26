@@ -15,6 +15,8 @@
   const listEl = document.getElementById('transportMapList');
   const mapBadgeEl = document.getElementById('transportMapMapBadge');
   const footNoteEl = document.getElementById('transportMapFootNote');
+  const driverToggleEl = document.querySelector('[data-driver-toggles]');
+  const vehicleUpdatedEl = document.querySelector('[data-vehicle-updated]');
 
   if (!form || !listEl) {
     return;
@@ -36,6 +38,7 @@
   let storeMarker = null;
   let rangeLayer = null;
   let vehicleLayer = null;
+  let connectionLayer = null;
   let markerById = new Map();
   let rowById = new Map();
   let itemById = new Map();
@@ -43,6 +46,7 @@
   let activeId = null;
   let lastFetchSeq = 0;
   let autoRefreshTimer = null;
+  let hiddenDriverIds = new Set();
 
   function ensureMap() {
     if (map || typeof L === 'undefined') {
@@ -66,6 +70,7 @@
 
     rangeLayer = L.layerGroup().addTo(map);
     vehicleLayer = L.layerGroup().addTo(map);
+    connectionLayer = L.layerGroup().addTo(map);
   }
 
   function updateDriverOptions() {
@@ -155,6 +160,7 @@
       const displayLabel = (tagText ? tagText + ' ' : '') + (item.display_name || item.cast_name || '-');
       const status = statusOptions[item.status] || {};
       const unassignedClass = item.driver_user_id === null ? ' is-unassigned' : '';
+      const attentionBadge = item.driver_user_id === null ? '<span class="transportMapAttentionTag">要割当</span>' : '';
       const noCoordsClass = item.has_coords ? '' : ' is-disabled';
       const timeText = formatTimeRange(item.pickup_time_from, item.pickup_time_to);
       const noteText = item.note_exists ? 'メモあり' : 'メモなし';
@@ -168,6 +174,7 @@
             '<div>' +
               '<div class="transportMapRowNameWrap">' +
                 '<div class="transportMapRowName">' + escapeHtml(displayLabel) + '</div>' +
+                attentionBadge +
                 sourceBadge +
               '</div>' +
               '<div class="transportMapRowMeta">' + escapeHtml(timeText) + ' / ' + escapeHtml(item.direction_bucket || '未分類') + ' / ' + escapeHtml(distanceText) + '</div>' +
@@ -205,8 +212,11 @@
   }
 
   function renderMap(base, items, vehicles) {
+    const visibleItems = filterItemsByDriver(items);
+    const visibleVehicles = filterVehiclesByDriver(vehicles || []);
+
     ensureMap();
-    if (!map || !clusterLayer || !rangeLayer || !vehicleLayer) {
+    if (!map || !clusterLayer || !rangeLayer || !vehicleLayer || !connectionLayer) {
       if (mapBadgeEl) {
         mapBadgeEl.textContent = '地図初期化失敗';
       }
@@ -216,6 +226,7 @@
     clusterLayer.clearLayers();
     rangeLayer.clearLayers();
     vehicleLayer.clearLayers();
+    connectionLayer.clearLayers();
     markerById = new Map();
 
     if (storeMarker) {
@@ -235,7 +246,7 @@
       L.circle(latLng, { radius: 10000, color: '#64748b', weight: 1, dashArray: '4 4', fillOpacity: 0.02 }).addTo(rangeLayer);
     }
 
-    items.forEach(function (item) {
+    visibleItems.forEach(function (item) {
       if (!item.has_coords) {
         return;
       }
@@ -252,7 +263,7 @@
       bounds.push(latLng);
     });
 
-    (vehicles || []).forEach(function (vehicle) {
+    visibleVehicles.forEach(function (vehicle) {
       if (vehicle.lat === null || vehicle.lng === null) {
         return;
       }
@@ -265,6 +276,8 @@
       bounds.push(latLng);
     });
 
+    renderDriverConnections(visibleItems, visibleVehicles);
+
     if (bounds.length) {
       map.fitBounds(bounds, { padding: [36, 36], maxZoom: 13 });
     } else {
@@ -272,16 +285,28 @@
     }
 
     if (mapBadgeEl) {
-      const mappedCount = items.filter(function (item) { return item.has_coords; }).length;
-      const vehicleCount = (vehicles || []).filter(function (vehicle) { return vehicle.lat !== null && vehicle.lng !== null; }).length;
+      const mappedCount = visibleItems.filter(function (item) { return item.has_coords; }).length;
+      const vehicleCount = visibleVehicles.filter(function (vehicle) { return vehicle.lat !== null && vehicle.lng !== null; }).length;
       mapBadgeEl.textContent = mappedCount + '件 + 車両' + vehicleCount + '台';
     }
     if (footNoteEl) {
       const hiddenCount = items.filter(function (item) { return !item.has_coords; }).length;
-      footNoteEl.textContent = hiddenCount > 0
-        ? '緯度経度がない ' + hiddenCount + ' 件は一覧のみ表示しています。'
-        : 'すべての対象を地図表示できます。';
+      const driverHiddenCount = items.filter(function (item) {
+        return item.driver_user_id !== null && hiddenDriverIds.has(Number(item.driver_user_id));
+      }).length;
+      const messages = [];
+      if (hiddenCount > 0) {
+        messages.push('緯度経度がない ' + hiddenCount + ' 件は一覧のみ表示しています。');
+      } else {
+        messages.push('すべての対象を地図表示できます。');
+      }
+      if (driverHiddenCount > 0) {
+        messages.push('ドライバー切替で ' + driverHiddenCount + ' 件を地図から隠しています。');
+      }
+      footNoteEl.textContent = messages.join(' ');
     }
+
+    renderVehicleUpdated(visibleVehicles);
   }
 
   function focusItem(itemId, openPopup) {
@@ -347,13 +372,15 @@
   function buildVehicleIcon(vehicle) {
     const className = vehicle.is_stale ? ' transportMapVehicleIcon--stale' : '';
     const label = (vehicle.vehicle_label || '車両') + ' ' + (vehicle.driver_name || '');
+    const timeLabel = formatDateTimeShort(vehicle.recorded_at);
     return L.divIcon({
       className: 'transportMapVehicleWrap',
       html: '<span class="transportMapVehicleIcon' + className + '">'
         + '<span class="transportMapVehicleBadge">' + escapeHtml(vehicle.vehicle_label || '車') + '</span>'
         + '<span class="transportMapVehicleName">' + escapeHtml(label.trim()) + '</span>'
+        + '<span class="transportMapVehicleTime">' + escapeHtml(timeLabel || '--:--') + '</span>'
         + '</span>',
-      iconSize: [168, 36],
+      iconSize: [212, 36],
       iconAnchor: [22, 18],
       popupAnchor: [0, -18]
     });
@@ -392,6 +419,143 @@
           '<span><b>速度</b>' + escapeHtml(vehicle.speed_kmh !== null ? Math.round(vehicle.speed_kmh) + 'km/h' : '-') + '</span>' +
         '</div>' +
       '</div>';
+  }
+
+  function filterItemsByDriver(items) {
+    return (items || []).filter(function (item) {
+      if (item.driver_user_id === null) {
+        return true;
+      }
+      return !hiddenDriverIds.has(Number(item.driver_user_id));
+    });
+  }
+
+  function filterVehiclesByDriver(vehicles) {
+    return (vehicles || []).filter(function (vehicle) {
+      const driverId = Number(vehicle.driver_user_id || 0);
+      if (driverId <= 0) {
+        return true;
+      }
+      return !hiddenDriverIds.has(driverId);
+    });
+  }
+
+  function renderDriverConnections(items, vehicles) {
+    if (!connectionLayer || typeof L === 'undefined') {
+      return;
+    }
+    const vehicleByDriver = new Map();
+    (vehicles || []).forEach(function (vehicle) {
+      const driverId = Number(vehicle.driver_user_id || 0);
+      if (driverId > 0 && vehicle.lat !== null && vehicle.lng !== null) {
+        vehicleByDriver.set(driverId, vehicle);
+      }
+    });
+
+    (items || []).forEach(function (item) {
+      const driverId = Number(item.driver_user_id || 0);
+      const vehicle = vehicleByDriver.get(driverId);
+      if (!vehicle || !item.has_coords) {
+        return;
+      }
+      L.polyline([
+        [vehicle.lat, vehicle.lng],
+        [item.pickup_lat, item.pickup_lng]
+      ], {
+        color: '#94a3b8',
+        weight: 1.5,
+        opacity: 0.42,
+        dashArray: '4 6',
+        interactive: false
+      }).addTo(connectionLayer);
+    });
+  }
+
+  function renderDriverToggles(items, vehicles) {
+    if (!driverToggleEl) {
+      return;
+    }
+
+    const entriesByDriver = new Map();
+    (items || []).forEach(function (item) {
+      const driverId = Number(item.driver_user_id || 0);
+      if (driverId <= 0) {
+        return;
+      }
+      const existing = entriesByDriver.get(driverId) || {
+        id: driverId,
+        name: item.driver_name || ('ドライバー' + driverId),
+        assignedCount: 0,
+        vehicleCount: 0
+      };
+      existing.assignedCount += 1;
+      entriesByDriver.set(driverId, existing);
+    });
+    (vehicles || []).forEach(function (vehicle) {
+      const driverId = Number(vehicle.driver_user_id || 0);
+      if (driverId <= 0) {
+        return;
+      }
+      const existing = entriesByDriver.get(driverId) || {
+        id: driverId,
+        name: vehicle.driver_name || ('ドライバー' + driverId),
+        assignedCount: 0,
+        vehicleCount: 0
+      };
+      existing.vehicleCount += 1;
+      entriesByDriver.set(driverId, existing);
+    });
+
+    const nextIds = new Set();
+    const entries = Array.from(entriesByDriver.values()).sort(function (a, b) {
+      return String(a.name).localeCompare(String(b.name), 'ja');
+    });
+    entries.forEach(function (entry) {
+      nextIds.add(entry.id);
+    });
+    hiddenDriverIds.forEach(function (driverId) {
+      if (!nextIds.has(driverId)) {
+        hiddenDriverIds.delete(driverId);
+      }
+    });
+
+    if (!entries.length) {
+      driverToggleEl.innerHTML = '<span class="transportMapEmptyInline">車両送信が始まると切替できます</span>';
+      return;
+    }
+
+    driverToggleEl.innerHTML = entries.map(function (entry) {
+      const hidden = hiddenDriverIds.has(entry.id);
+      const stateClass = hidden ? ' is-muted' : ' is-active';
+      const detail = [];
+      if (entry.assignedCount > 0) {
+        detail.push('担当' + entry.assignedCount);
+      }
+      if (entry.vehicleCount > 0) {
+        detail.push('車両' + entry.vehicleCount);
+      }
+      return ''
+        + '<button type="button" class="transportMapDriverToggle' + stateClass + '" data-driver-toggle="' + escapeHtml(String(entry.id)) + '">'
+        + '<span class="transportMapDriverToggleName">' + escapeHtml(entry.name) + '</span>'
+        + '<span class="transportMapDriverToggleMeta">' + escapeHtml(detail.join(' / ')) + '</span>'
+        + '</button>';
+    }).join('');
+  }
+
+  function renderVehicleUpdated(vehicles) {
+    if (!vehicleUpdatedEl) {
+      return;
+    }
+    const sorted = (vehicles || [])
+      .filter(function (vehicle) { return vehicle.recorded_at; })
+      .sort(function (a, b) {
+        return String(b.recorded_at).localeCompare(String(a.recorded_at));
+      });
+    if (!sorted.length) {
+      vehicleUpdatedEl.textContent = '車両更新 まだありません';
+      return;
+    }
+    vehicleUpdatedEl.textContent = '車両更新 ' + formatDateTimeShort(sorted[0].recorded_at);
   }
 
   function buildDriverSelectHtml(storeId, selectedDriverId) {
@@ -486,6 +650,24 @@
     }
   });
 
+  document.addEventListener('click', function (event) {
+    const toggle = event.target && event.target.closest ? event.target.closest('[data-driver-toggle]') : null;
+    if (!toggle) {
+      return;
+    }
+    const driverId = Number(toggle.getAttribute('data-driver-toggle') || '0');
+    if (driverId <= 0) {
+      return;
+    }
+    if (hiddenDriverIds.has(driverId)) {
+      hiddenDriverIds.delete(driverId);
+    } else {
+      hiddenDriverIds.add(driverId);
+    }
+    renderDriverToggles(Array.from(itemById.values()), window.__transportVehicles || []);
+    renderMap(window.__transportBase || {}, Array.from(itemById.values()), window.__transportVehicles || []);
+  });
+
   async function fetchData(pushHistory) {
     const seq = ++lastFetchSeq;
     const params = serializeForm();
@@ -516,6 +698,9 @@
 
       renderSummary(json.summary || {});
       renderList(json.items || []);
+      renderDriverToggles(json.items || [], json.vehicles || []);
+      window.__transportBase = json.base || {};
+      window.__transportVehicles = json.vehicles || [];
       renderMap(json.base || {}, json.items || [], json.vehicles || []);
       if (focusCastId > 0 && activeId === null) {
         focusCast(focusCastId, true);
@@ -619,6 +804,18 @@
       return start + ' - ' + end;
     }
     return start || end || '時間未設定';
+  }
+
+  function formatDateTimeShort(value) {
+    const text = String(value || '').trim();
+    if (text === '') {
+      return '';
+    }
+    const parts = text.split(' ');
+    if (parts.length >= 2) {
+      return parts[1].slice(0, 5);
+    }
+    return text.slice(-5);
   }
 
   form.addEventListener('submit', function (event) {
