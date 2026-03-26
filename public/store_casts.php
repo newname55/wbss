@@ -153,7 +153,7 @@ render_header('店別キャスト管理', [
           <a class="btn" href="/wbss/public/store_casts.php?store_id=<?= (int)$storeId ?>&show_retired=<?= $showRetired ? '0' : '1' ?>">
             <?= $showRetired ? '在籍のみ表示' : '退店も表示' ?>
           </a>
-          <a class="btn" href="/wbss/public/store_casts_invites.php?store_id=<?= (int)$storeId ?>">招待リンク管理</a>
+          <a class="btn" target="_blank" href="/wbss/public/store_casts_invite_qr.php?store_id=<?= (int)$storeId ?>">招待QR</a>
         <?php endif; ?>
       </div>
     </div>
