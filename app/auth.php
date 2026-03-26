@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
 
+const ROLE_ALL_STORE_SHIFT_VIEW = 'all_store_shift_view';
+
 function ensure_session(): void {
   if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -37,6 +39,9 @@ function can_edit_master(): bool {
 }
 function can_view_master(): bool {
   return is_role('super_user') || is_role('admin') || is_role('manager');
+}
+function can_view_all_store_shift(): bool {
+  return is_role('super_user') || is_role('admin') || is_role(ROLE_ALL_STORE_SHIFT_VIEW);
 }
 function can_do_stock_ops(): bool {
   return is_role('super_user') || is_role('admin') || is_role('manager') || is_role('staff');

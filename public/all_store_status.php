@@ -227,7 +227,7 @@ render_page_start('全店統合ビュー');
 render_header('全店統合ビュー', [
   'back_href' => '/wbss/public/dashboard.php',
   'back_label' => '← ダッシュボード',
-  'right_html' => '<a class="btn" href="/wbss/public/all_cast_kpi.php">全店キャストKPI</a> <a class="btn" href="/wbss/public/dashboard.php">ダッシュボード</a>',
+  'right_html' => '<a class="btn" href="/wbss/public/all_store_shift_plans.php">全店出勤予定</a> <a class="btn" href="/wbss/public/all_cast_kpi.php">全店キャストKPI</a> <a class="btn" href="/wbss/public/dashboard.php">ダッシュボード</a>',
 ]);
 ?>
 <style>
