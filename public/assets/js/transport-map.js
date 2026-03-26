@@ -146,7 +146,8 @@
       if (Number(item.cast_id || 0) > 0) {
         itemIdByCastId.set(Number(item.cast_id), item.id);
       }
-      const tagText = item.shop_tag ? '【' + item.shop_tag + '】' : '';
+      const shopTag = item.shop_tag ? String(item.shop_tag) : (Number(item.cast_id || 0) > 0 ? String(item.cast_id) : '');
+      const tagText = shopTag ? '【' + shopTag + '】' : '';
       const displayLabel = (tagText ? tagText + ' ' : '') + (item.display_name || item.cast_name || '-');
       const status = statusOptions[item.status] || {};
       const unassignedClass = item.driver_user_id === null ? ' is-unassigned' : '';
@@ -317,7 +318,8 @@
 
   function buildPopupHtml(item) {
     const status = statusOptions[item.status] || {};
-    const tagText = item.shop_tag ? '【' + item.shop_tag + '】' : '';
+    const shopTag = item.shop_tag ? String(item.shop_tag) : (Number(item.cast_id || 0) > 0 ? String(item.cast_id) : '');
+    const tagText = shopTag ? '【' + shopTag + '】' : '';
     const displayLabel = (tagText ? tagText + ' ' : '') + (item.display_name || item.cast_name || '-');
     return '' +
       '<div class="transportMapPopup">' +
