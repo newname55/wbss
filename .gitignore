@@ -83,3 +83,4 @@ Thumbs.db
 .cache/
 .history/
 .wbss_env
+app/webpush_vapid_keys.json
