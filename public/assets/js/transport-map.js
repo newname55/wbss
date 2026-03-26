@@ -35,6 +35,7 @@
   let rangeLayer = null;
   let markerById = new Map();
   let rowById = new Map();
+  let itemById = new Map();
   let activeId = null;
   let lastFetchSeq = 0;
 
@@ -130,6 +131,7 @@
   function renderList(items) {
     markerById = markerById || new Map();
     rowById = new Map();
+    itemById = new Map();
 
     if (!items.length) {
       listEl.innerHTML = '<div class="transportMapEmpty">条件に一致する送迎対象はありません。</div>';
@@ -137,6 +139,7 @@
     }
 
     listEl.innerHTML = items.map(function (item) {
+      itemById.set(item.id, item);
       const status = statusOptions[item.status] || {};
       const unassignedClass = item.driver_user_id === null ? ' is-unassigned' : '';
       const noCoordsClass = item.has_coords ? '' : ' is-disabled';
@@ -145,11 +148,15 @@
       const distanceText = item.distance_km !== null ? item.distance_km.toFixed(1) + 'km' : '距離未計算';
       const driverText = item.driver_name || '未割当';
       const addressText = item.pickup_address_short || '住所未登録';
+      const sourceBadge = item.source_type === 'shift_plan' ? '<span class="transportMapSourceTag">勤務予定由来</span>' : '';
       return '' +
-        '<button type="button" class="transportMapRow' + unassignedClass + noCoordsClass + '" data-row-id="' + escapeHtml(String(item.id)) + '">' +
+        '<article class="transportMapRow' + unassignedClass + noCoordsClass + '" data-row-id="' + escapeHtml(String(item.id)) + '">' +
           '<div class="transportMapRowHead">' +
             '<div>' +
-              '<div class="transportMapRowName">' + escapeHtml(item.display_name || item.cast_name || '-') + '</div>' +
+              '<div class="transportMapRowNameWrap">' +
+                '<div class="transportMapRowName">' + escapeHtml(item.display_name || item.cast_name || '-') + '</div>' +
+                sourceBadge +
+              '</div>' +
               '<div class="transportMapRowMeta">' + escapeHtml(timeText) + ' / ' + escapeHtml(item.direction_bucket || '未分類') + ' / ' + escapeHtml(distanceText) + '</div>' +
             '</div>' +
             '<span class="transportMapStatusPill" style="--status-color:' + escapeHtml(status.color || '#475569') + '">' + escapeHtml(item.status_label || item.status || '-') + '</span>' +
@@ -160,19 +167,27 @@
             '<span><b>方面</b>' + escapeHtml(item.area_name || item.direction_bucket || '未分類') + '</span>' +
             '<span><b>メモ</b>' + escapeHtml(noteText) + '</span>' +
           '</div>' +
+          '<div class="transportMapAssignRow">' +
+            '<label class="transportMapAssignField">' +
+              '<span>ドライバー</span>' +
+              buildDriverSelectHtml(item.store_id, item.driver_user_id) +
+            '</label>' +
+            '<label class="transportMapAssignField">' +
+              '<span>ステータス</span>' +
+              buildStatusSelectHtml(item.status) +
+            '</label>' +
+            '<button type="button" class="btn miniBtn transportMapSaveBtn" data-save-assignment="' + escapeHtml(String(item.id)) + '">保存</button>' +
+          '</div>' +
           '<div class="transportMapRowActions">' +
             '<span class="transportMapMiniHint">' + (item.has_coords ? '地図で表示可能' : '座標未登録のため一覧のみ') + '</span>' +
-            '<span class="miniBtn">地図へ移動</span>' +
+            '<button type="button" class="miniBtn" data-focus-row="' + escapeHtml(String(item.id)) + '">地図へ移動</button>' +
           '</div>' +
-        '</button>';
+        '</article>';
     }).join('');
 
     listEl.querySelectorAll('[data-row-id]').forEach(function (rowEl) {
       const itemId = Number(rowEl.getAttribute('data-row-id') || '0');
       rowById.set(itemId, rowEl);
-      rowEl.addEventListener('click', function () {
-        focusItem(itemId, true);
-      });
     });
   }
 
@@ -302,6 +317,30 @@
       '</div>';
   }
 
+  function buildDriverSelectHtml(storeId, selectedDriverId) {
+    const options = driversByStore[String(storeId || 0)] || [];
+    const selected = selectedDriverId === null ? '0' : String(selectedDriverId);
+    const html = ['<select class="sel transportMapInlineSelect" data-assign-driver>'];
+    html.push('<option value="0"' + (selected === '0' ? ' selected' : '') + '>未割当</option>');
+    options.forEach(function (driver) {
+      const driverId = String(driver.id || 0);
+      html.push('<option value="' + escapeHtml(driverId) + '"' + (driverId === selected ? ' selected' : '') + '>' + escapeHtml(driver.name || '') + '</option>');
+    });
+    html.push('</select>');
+    return html.join('');
+  }
+
+  function buildStatusSelectHtml(selectedStatus) {
+    const current = String(selectedStatus || 'pending');
+    const html = ['<select class="sel transportMapInlineSelect" data-assign-status>'];
+    Object.keys(statusOptions).forEach(function (statusKey) {
+      const option = statusOptions[statusKey] || {};
+      html.push('<option value="' + escapeHtml(statusKey) + '"' + (statusKey === current ? ' selected' : '') + '>' + escapeHtml(option.label || statusKey) + '</option>');
+    });
+    html.push('</select>');
+    return html.join('');
+  }
+
   document.addEventListener('click', function (event) {
     const trigger = event.target && event.target.closest ? event.target.closest('[data-focus-id]') : null;
     if (!trigger) {
@@ -310,6 +349,63 @@
     const itemId = Number(trigger.getAttribute('data-focus-id') || '0');
     if (itemId > 0) {
       focusItem(itemId, false);
+    }
+  });
+
+  listEl.addEventListener('click', function (event) {
+    const saveTrigger = event.target && event.target.closest ? event.target.closest('[data-save-assignment]') : null;
+    if (saveTrigger) {
+      const itemId = Number(saveTrigger.getAttribute('data-save-assignment') || '0');
+      if (itemId > 0) {
+        saveAssignment(itemId, saveTrigger);
+      }
+      return;
+    }
+
+    const focusTrigger = event.target && event.target.closest ? event.target.closest('[data-focus-row]') : null;
+    if (focusTrigger) {
+      const itemId = Number(focusTrigger.getAttribute('data-focus-row') || '0');
+      if (itemId > 0) {
+        focusItem(itemId, true);
+      }
+      return;
+    }
+
+    const interactive = event.target && event.target.closest
+      ? event.target.closest('select, input, button, a, label')
+      : null;
+    if (interactive) {
+      return;
+    }
+
+    const row = event.target && event.target.closest ? event.target.closest('[data-row-id]') : null;
+    if (!row) {
+      return;
+    }
+    const itemId = Number(row.getAttribute('data-row-id') || '0');
+    if (itemId > 0) {
+      focusItem(itemId, true);
+    }
+  });
+
+  listEl.addEventListener('change', function (event) {
+    const driverField = event.target && event.target.matches ? (event.target.matches('[data-assign-driver]') ? event.target : null) : null;
+    if (!driverField) {
+      return;
+    }
+    const rowEl = driverField.closest('[data-row-id]');
+    if (!rowEl) {
+      return;
+    }
+    const statusField = rowEl.querySelector('[data-assign-status]');
+    if (!statusField) {
+      return;
+    }
+    if (String(driverField.value || '0') === '0' && ['assigned'].indexOf(String(statusField.value || '')) >= 0) {
+      statusField.value = 'pending';
+    }
+    if (String(driverField.value || '0') !== '0' && String(statusField.value || '') === 'pending') {
+      statusField.value = 'assigned';
     }
   });
 
@@ -357,6 +453,59 @@
     } finally {
       if (reloadButton) {
         reloadButton.disabled = false;
+      }
+    }
+  }
+
+  async function saveAssignment(itemId, triggerEl) {
+    const rowEl = rowById.get(itemId);
+    const item = itemById.get(itemId);
+    if (!rowEl || !item) {
+      return;
+    }
+
+    const driverField = rowEl.querySelector('[data-assign-driver]');
+    const statusField = rowEl.querySelector('[data-assign-status]');
+    const driverUserId = driverField ? String(driverField.value || '0') : '0';
+    const requestedStatus = statusField ? String(statusField.value || 'pending') : 'pending';
+
+    const payload = new URLSearchParams();
+    payload.set('action', 'save_assignment');
+    payload.set('csrf_token', String(pageConfig.csrfToken || ''));
+    payload.set('store_id', String(item.store_id || storeSelect.value || '0'));
+    payload.set('business_date', String(item.business_date || ''));
+    payload.set('cast_id', String(item.cast_id || '0'));
+    payload.set('driver_user_id', driverUserId);
+    payload.set('status', requestedStatus);
+
+    if (triggerEl) {
+      triggerEl.disabled = true;
+      triggerEl.textContent = '保存中…';
+    }
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        body: payload.toString()
+      });
+      const json = await response.json().catch(function () { return {}; });
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error || '送迎割当の保存に失敗しました');
+      }
+      const nextFocusId = json.item && json.item.id ? Number(json.item.id) : itemId;
+      await fetchData(false);
+      focusItem(nextFocusId, true);
+    } catch (error) {
+      window.alert(error.message || '送迎割当の保存に失敗しました');
+    } finally {
+      if (triggerEl) {
+        triggerEl.disabled = false;
+        triggerEl.textContent = '保存';
       }
     }
   }

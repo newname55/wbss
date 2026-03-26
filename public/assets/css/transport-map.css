@@ -205,10 +205,29 @@
   align-items:flex-start;
 }
 
+.transportMapRowNameWrap{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
 .transportMapRowName{
   font-size:16px;
   font-weight:700;
   color:#0f172a;
+}
+
+.transportMapSourceTag{
+  display:inline-flex;
+  align-items:center;
+  min-height:22px;
+  padding:3px 8px;
+  border-radius:999px;
+  background:rgba(59,130,246,.10);
+  color:#1d4ed8;
+  font-size:10px;
+  font-weight:800;
 }
 
 .transportMapRowMeta{
@@ -240,6 +259,35 @@
   justify-content:space-between;
   align-items:center;
   gap:8px;
+}
+
+.transportMapAssignRow{
+  display:grid;
+  grid-template-columns:minmax(0, 1.2fr) minmax(0, .9fr) auto;
+  gap:10px;
+  align-items:end;
+}
+
+.transportMapAssignField{
+  display:grid;
+  gap:6px;
+  min-width:0;
+}
+
+.transportMapAssignField span{
+  color:var(--muted);
+  font-size:11px;
+  font-weight:700;
+}
+
+.transportMapInlineSelect{
+  min-height:38px;
+  width:100%;
+  font-size:13px;
+}
+
+.transportMapSaveBtn{
+  white-space:nowrap;
 }
 
 .transportMapMiniHint{
@@ -542,6 +590,13 @@ body[data-theme="light"] .transportMapRow{
   box-shadow:0 8px 18px rgba(15,18,34,.05);
 }
 
+body[data-theme="dark"] .transportMapSourceTag,
+body[data-theme="cast"] .transportMapSourceTag,
+body[data-theme="staff"] .transportMapSourceTag{
+  background:color-mix(in srgb, #2563eb 18%, var(--cardA));
+  color:var(--txt);
+}
+
 .transportMapPopupAddress,
 .transportMapPopupNote{
   font-size:12px;
@@ -565,6 +620,16 @@ body[data-theme="light"] .transportMapRow{
     grid-template-columns:1fr;
     min-height:0;
   }
+
+  .transportMapAssignRow{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+
+  .transportMapSaveBtn{
+    grid-column:1 / -1;
+    width:100%;
+    justify-content:center;
+  }
 }
 
 @media (max-width: 720px){
@@ -578,7 +643,8 @@ body[data-theme="light"] .transportMapRow{
   .transportMapFilterForm,
   .transportMapSummaryGrid,
   .transportMapMetaGrid,
-  .transportMapRowGrid{
+  .transportMapRowGrid,
+  .transportMapAssignRow{
     grid-template-columns:1fr;
   }
 
