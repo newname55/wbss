@@ -146,6 +146,8 @@
       if (Number(item.cast_id || 0) > 0) {
         itemIdByCastId.set(Number(item.cast_id), item.id);
       }
+      const tagText = item.shop_tag ? '【' + item.shop_tag + '】' : '';
+      const displayLabel = (tagText ? tagText + ' ' : '') + (item.display_name || item.cast_name || '-');
       const status = statusOptions[item.status] || {};
       const unassignedClass = item.driver_user_id === null ? ' is-unassigned' : '';
       const noCoordsClass = item.has_coords ? '' : ' is-disabled';
@@ -160,7 +162,7 @@
           '<div class="transportMapRowHead">' +
             '<div>' +
               '<div class="transportMapRowNameWrap">' +
-                '<div class="transportMapRowName">' + escapeHtml(item.display_name || item.cast_name || '-') + '</div>' +
+                '<div class="transportMapRowName">' + escapeHtml(displayLabel) + '</div>' +
                 sourceBadge +
               '</div>' +
               '<div class="transportMapRowMeta">' + escapeHtml(timeText) + ' / ' + escapeHtml(item.direction_bucket || '未分類') + ' / ' + escapeHtml(distanceText) + '</div>' +
@@ -315,9 +317,11 @@
 
   function buildPopupHtml(item) {
     const status = statusOptions[item.status] || {};
+    const tagText = item.shop_tag ? '【' + item.shop_tag + '】' : '';
+    const displayLabel = (tagText ? tagText + ' ' : '') + (item.display_name || item.cast_name || '-');
     return '' +
       '<div class="transportMapPopup">' +
-        '<div class="transportMapPopupTitle">' + escapeHtml(item.display_name || item.cast_name || '-') + '</div>' +
+        '<div class="transportMapPopupTitle">' + escapeHtml(displayLabel) + '</div>' +
         '<div class="transportMapPopupGrid">' +
           '<span><b>時間</b>' + escapeHtml(formatTimeRange(item.pickup_time_from, item.pickup_time_to)) + '</span>' +
           '<span><b>方面</b>' + escapeHtml(item.direction_bucket || '未分類') + '</span>' +

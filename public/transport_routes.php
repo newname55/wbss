@@ -349,8 +349,7 @@ render_header('送迎ルート', [
                   <div class="routeCastItem<?= ($focusCastId > 0 && $focusCastId === $castUserId) ? ' is-focused-cast' : '' ?>" data-route-cast-id="<?= $castUserId ?>">
                     <div class="routeCastMain">
                       <div>
-                        <b><?= h((string)$cast['display_name']) ?></b>
-                        <span class="muted"><?= h((string)($cast['shop_tag'] !== '' ? ' / ' . $cast['shop_tag'] : '')) ?></span>
+                        <b><?= h((string)(($cast['shop_tag'] !== '' ? '【' . $cast['shop_tag'] . '】 ' : '') . (string)$cast['display_name'])) ?></b>
                       </div>
                       <a class="routeCastMapLink" href="<?= h($castMapUrl) ?>">地図で確認</a>
                     </div>
@@ -397,7 +396,7 @@ render_header('送迎ルート', [
                           <li>
                             <div class="routeStopMain">
                               <div class="routeStopMainText">
-                                <b><?= h((string)$stop['display_name']) ?></b>
+                                <b><?= h((string)(((string)($stop['shop_tag'] ?? '') !== '' ? '【' . (string)$stop['shop_tag'] . '】 ' : '') . (string)$stop['display_name'])) ?></b>
                                 <span class="muted"><?= h((string)($stop['planned_at'] ?? '')) ?></span>
                               </div>
                               <?php if ($stopCastId > 0): ?>
