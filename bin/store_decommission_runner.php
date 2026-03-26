@@ -26,12 +26,21 @@ foreach ($jobs as $job) {
     continue;
   }
 
+  $batchId = (int)($job['batch_id'] ?? 0);
+  $batch = $batchId > 0 ? store_decommission_fetch_batch($pdo, $batchId) : null;
+  $persistDryRun = $batchId > 0
+    && !$dryRun
+    && $batch
+    && (int)($batch['dry_run'] ?? 0) === 1;
+
   try {
-    $result = store_decommission_execute_job($pdo, $jobId, $dryRun, 0);
+    $result = store_decommission_execute_job($pdo, $jobId, $dryRun, 0, $persistDryRun);
+    $effectiveStatus = $dryRun ? 'dry-run' : ($persistDryRun ? 'dry-run-completed' : 'completed');
     fwrite(STDOUT, sprintf(
-      "job=%d status=%s deleted_tables=%d skipped_tables=%d\n",
+      "job=%d batch=%d status=%s deleted_tables=%d skipped_tables=%d\n",
       $jobId,
-      $dryRun ? 'dry-run' : 'completed',
+      $batchId,
+      $effectiveStatus,
       count($result['deleted'] ?? []),
       count($result['skipped'] ?? [])
     ));

@@ -266,6 +266,7 @@ function store_decommission_delete_excluded(): array
   return [
     // 親/監査/ジョブ
     'stores' => 'parent store row is retained for audit visibility',
+    'store_decommission_batches' => 'decommission control tables must remain',
     'store_decommission_jobs' => 'decommission control tables must remain',
     'store_decommission_logs' => 'decommission control tables must remain',
     'store_decommission_snapshots' => 'decommission control tables must remain',
@@ -421,6 +422,353 @@ function store_decommission_create_snapshot(PDO $pdo, int $jobId, int $storeId, 
   ]);
 }
 
+function store_decommission_normalize_store_ids(PDO $pdo, array $storeIds): array
+{
+  $resolved = [];
+  foreach ($storeIds as $storeId) {
+    $storeId = (int)$storeId;
+    if ($storeId <= 0) {
+      continue;
+    }
+    $resolved[] = store_decommission_resolve_store_id($pdo, $storeId);
+  }
+
+  $resolved = array_values(array_unique($resolved));
+  sort($resolved, SORT_NUMERIC);
+  if (!$resolved) {
+    throw new RuntimeException('対象店舗を1件以上選択してください');
+  }
+  return $resolved;
+}
+
+function store_decommission_validate_schedule_at(?string $scheduledAt): ?string
+{
+  $scheduledAt = trim((string)$scheduledAt);
+  if ($scheduledAt === '') {
+    return null;
+  }
+  if (!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $scheduledAt)) {
+    throw new RuntimeException('scheduled_at は YYYY-MM-DD HH:MM:SS 形式で入力してください');
+  }
+  return $scheduledAt;
+}
+
+function store_decommission_fetch_batch(PDO $pdo, int $batchId): ?array
+{
+  if ($batchId <= 0 || !store_decommission_table_exists($pdo, 'store_decommission_batches')) {
+    return null;
+  }
+
+  $st = $pdo->prepare("SELECT * FROM store_decommission_batches WHERE id = ? LIMIT 1");
+  $st->execute([$batchId]);
+  $row = $st->fetch(PDO::FETCH_ASSOC);
+  return is_array($row) ? $row : null;
+}
+
+function store_decommission_fetch_batch_jobs(PDO $pdo, int $batchId): array
+{
+  if ($batchId <= 0 || !store_decommission_table_exists($pdo, 'store_decommission_jobs')) {
+    return [];
+  }
+
+  $sql = "
+    SELECT
+      j.*,
+      s.name AS store_name
+    FROM store_decommission_jobs j
+    LEFT JOIN stores s ON s.id = j.store_id
+    WHERE j.batch_id = ?
+    ORDER BY j.id ASC
+  ";
+  $st = $pdo->prepare($sql);
+  $st->execute([$batchId]);
+  return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
+function store_decommission_batch_progress_from_jobs(array $batch, array $jobs): array
+{
+  $counts = [
+    'requested' => 0,
+    'approved' => 0,
+    'scheduled' => 0,
+    'running' => 0,
+    'completed' => 0,
+    'dry_run_completed' => 0,
+    'cancelled' => 0,
+    'failed' => 0,
+  ];
+  $storeIds = [];
+
+  foreach ($jobs as $job) {
+    $status = (string)($job['status'] ?? '');
+    if (!array_key_exists($status, $counts)) {
+      $counts[$status] = 0;
+    }
+    $counts[$status]++;
+    $storeIds[(int)($job['store_id'] ?? 0)] = true;
+  }
+
+  $totalJobs = count($jobs);
+  $terminal = $counts['completed'] + $counts['dry_run_completed'] + $counts['cancelled'] + $counts['failed'];
+  $successful = $counts['completed'] + $counts['dry_run_completed'];
+  $hasPending = ($counts['requested'] + $counts['approved'] + $counts['scheduled'] + $counts['running']) > 0;
+  $status = 'scheduled';
+
+  if ($totalJobs === 0) {
+    $status = 'failed';
+  } elseif ($counts['running'] > 0) {
+    $status = 'running';
+  } elseif ($hasPending) {
+    $status = (!empty($batch['started_at']) || $successful > 0 || $counts['failed'] > 0) ? 'running' : 'scheduled';
+  } elseif ($counts['failed'] === $totalJobs) {
+    $status = 'failed';
+  } elseif ($counts['dry_run_completed'] === $totalJobs) {
+    $status = 'dry_run_completed';
+  } elseif ($counts['failed'] > 0 && $successful > 0) {
+    $status = 'partial_failed';
+  } elseif ($successful === $totalJobs) {
+    $status = 'completed';
+  } elseif ($terminal === $totalJobs && $counts['cancelled'] === $totalJobs) {
+    $status = 'cancelled';
+  } else {
+    $status = 'partial_failed';
+  }
+
+  return [
+    'status' => $status,
+    'total_jobs' => $totalJobs,
+    'store_count' => count($storeIds),
+    'completed_jobs' => $counts['completed'],
+    'dry_run_completed_jobs' => $counts['dry_run_completed'],
+    'failed_jobs' => $counts['failed'],
+    'running_jobs' => $counts['running'],
+    'scheduled_jobs' => $counts['scheduled'],
+    'requested_jobs' => $counts['requested'],
+    'approved_jobs' => $counts['approved'],
+    'cancelled_jobs' => $counts['cancelled'],
+    'terminal_jobs' => $terminal,
+    'progress_percent' => $totalJobs > 0 ? (int)floor(($terminal / $totalJobs) * 100) : 0,
+    'counts' => $counts,
+  ];
+}
+
+function store_decommission_batch_progress(PDO $pdo, int $batchId): array
+{
+  $batch = store_decommission_fetch_batch($pdo, $batchId);
+  if (!$batch) {
+    throw new RuntimeException('batch が見つかりません');
+  }
+
+  $jobs = store_decommission_fetch_batch_jobs($pdo, $batchId);
+  $progress = store_decommission_batch_progress_from_jobs($batch, $jobs);
+
+  return [
+    'batch' => $batch,
+    'jobs' => $jobs,
+    'progress' => $progress,
+  ];
+}
+
+function store_decommission_refresh_batch_status(PDO $pdo, int $batchId): ?array
+{
+  $payload = store_decommission_batch_progress($pdo, $batchId);
+  $batch = $payload['batch'];
+  $progress = $payload['progress'];
+  $status = (string)$progress['status'];
+
+  $sets = ['status = :status', 'updated_at = NOW()'];
+  $params = [
+    ':status' => $status,
+    ':id' => $batchId,
+  ];
+
+  if ($status === 'running' && empty($batch['started_at'])) {
+    $sets[] = 'started_at = NOW()';
+  }
+  if (in_array($status, ['completed', 'dry_run_completed', 'partial_failed', 'failed', 'cancelled'], true)) {
+    $sets[] = 'completed_at = NOW()';
+  }
+  if (in_array($status, ['partial_failed', 'failed'], true) && empty($batch['failure_reason'])) {
+    $sets[] = 'failure_reason = :failure_reason';
+    $params[':failure_reason'] = 'one or more child jobs failed';
+  }
+
+  $sql = "UPDATE store_decommission_batches SET " . implode(', ', $sets) . " WHERE id = :id LIMIT 1";
+  $st = $pdo->prepare($sql);
+  $st->execute($params);
+
+  return store_decommission_fetch_batch($pdo, $batchId);
+}
+
+function store_decommission_mark_batch_running(PDO $pdo, int $batchId): void
+{
+  if ($batchId <= 0 || !store_decommission_table_exists($pdo, 'store_decommission_batches')) {
+    return;
+  }
+
+  $pdo->prepare("
+    UPDATE store_decommission_batches
+    SET status = 'running',
+        started_at = COALESCE(started_at, NOW()),
+        updated_at = NOW()
+    WHERE id = ?
+      AND status = 'scheduled'
+    LIMIT 1
+  ")->execute([$batchId]);
+}
+
+function store_decommission_list_batches(PDO $pdo, int $limit = 20): array
+{
+  $limit = max(1, min(100, $limit));
+  if (!store_decommission_table_exists($pdo, 'store_decommission_batches')) {
+    return [];
+  }
+
+  $st = $pdo->query("
+    SELECT *
+    FROM store_decommission_batches
+    ORDER BY id DESC
+    LIMIT {$limit}
+  ");
+  $batches = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  foreach ($batches as &$batch) {
+    $jobs = store_decommission_fetch_batch_jobs($pdo, (int)($batch['id'] ?? 0));
+    $batch['_progress'] = store_decommission_batch_progress_from_jobs($batch, $jobs);
+    $batch['_jobs'] = $jobs;
+  }
+  unset($batch);
+
+  return $batches;
+}
+
+function store_decommission_create_batch(
+  PDO $pdo,
+  array $storeIds,
+  int $actorUserId,
+  string $password,
+  string $reason,
+  ?string $scheduledAt,
+  bool $dryRun = false
+): array {
+  if (!store_decommission_table_exists($pdo, 'store_decommission_batches')) {
+    throw new RuntimeException('store_decommission_batches テーブルがありません');
+  }
+  if (!store_decommission_column_exists($pdo, 'store_decommission_jobs', 'batch_id')) {
+    throw new RuntimeException('store_decommission_jobs.batch_id カラムがありません');
+  }
+  if (!store_decommission_verify_password($pdo, $actorUserId, $password)) {
+    throw new RuntimeException('パスワード再入力が一致しません');
+  }
+
+  $storeIds = store_decommission_normalize_store_ids($pdo, $storeIds);
+  $scheduledAt = store_decommission_validate_schedule_at($scheduledAt) ?? store_decommission_now();
+  $requestedIp = $_SERVER['REMOTE_ADDR'] ?? null;
+
+  $pdo->beginTransaction();
+  try {
+    $st = $pdo->prepare("
+      INSERT INTO store_decommission_batches (
+        requested_by,
+        status,
+        reason,
+        dry_run,
+        scheduled_at,
+        requested_ip,
+        updated_at
+      ) VALUES (?, 'scheduled', ?, ?, ?, ?, NOW())
+    ");
+    $st->execute([
+      $actorUserId,
+      $reason !== '' ? $reason : null,
+      $dryRun ? 1 : 0,
+      $scheduledAt,
+      $requestedIp,
+    ]);
+
+    $batchId = (int)$pdo->lastInsertId();
+    $jobIds = [];
+
+    foreach ($storeIds as $storeId) {
+      $store = store_decommission_fetch_store($pdo, $storeId);
+      if ((string)($store['lifecycle_status'] ?? 'active') === 'decommissioned') {
+        throw new RuntimeException('解約済み店舗は batch 対象にできません: store_id=' . $storeId);
+      }
+
+      $latestJob = store_decommission_fetch_latest_job($pdo, $storeId);
+      if ($latestJob && in_array((string)$latestJob['status'], ['requested', 'approved', 'scheduled', 'running'], true)) {
+        throw new RuntimeException('未完了の解約ジョブが存在します: store_id=' . $storeId);
+      }
+
+      $summary = store_decommission_preview($pdo, $storeId);
+      $confirmToken = bin2hex(random_bytes(32));
+
+      $jobSt = $pdo->prepare("
+        INSERT INTO store_decommission_jobs (
+          batch_id,
+          store_id,
+          requested_by,
+          approved_by,
+          status,
+          reason,
+          confirm_token,
+          requested_at,
+          approved_at,
+          scheduled_at,
+          requested_ip,
+          approved_ip,
+          updated_at
+        ) VALUES (?, ?, ?, ?, 'scheduled', ?, ?, NOW(), NOW(), ?, ?, ?, NOW())
+      ");
+      $jobSt->execute([
+        $batchId,
+        $storeId,
+        $actorUserId,
+        $actorUserId,
+        $reason !== '' ? $reason : null,
+        $confirmToken,
+        $scheduledAt,
+        $requestedIp,
+        $requestedIp,
+      ]);
+
+      $jobId = (int)$pdo->lastInsertId();
+      $jobIds[] = $jobId;
+      store_decommission_create_snapshot($pdo, $jobId, $storeId, $summary);
+      store_decommission_update_store_lifecycle($pdo, $storeId, 'decommissioning', [
+        'decommission_requested_at' => store_decommission_now(),
+        'decommission_approved_at' => store_decommission_now(),
+        'decommission_scheduled_at' => $scheduledAt,
+        'decommission_completed_at' => null,
+      ]);
+      store_decommission_log_step($pdo, $jobId, $storeId, 'batch.request', 'batch 廃棄申請', 'completed', $reason, [
+        'batch_id' => $batchId,
+        'summary' => $summary,
+        'dry_run' => $dryRun,
+      ], $actorUserId);
+      store_decommission_log_step($pdo, $jobId, $storeId, 'batch.schedule', 'batch 廃棄予約', 'completed', null, [
+        'batch_id' => $batchId,
+        'scheduled_at' => $scheduledAt,
+        'dry_run' => $dryRun,
+      ], $actorUserId);
+    }
+
+    $pdo->commit();
+
+    return [
+      'batch_id' => $batchId,
+      'job_ids' => $jobIds,
+      'store_ids' => $storeIds,
+      'scheduled_at' => $scheduledAt,
+      'dry_run' => $dryRun,
+    ];
+  } catch (Throwable $e) {
+    if ($pdo->inTransaction()) {
+      $pdo->rollBack();
+    }
+    throw $e;
+  }
+}
+
 function store_decommission_fetch_latest_job(PDO $pdo, int $storeId): ?array
 {
   if (!store_decommission_table_exists($pdo, 'store_decommission_jobs')) {
@@ -549,6 +897,7 @@ function store_decommission_request(
   ?string $requestedScheduleAt = null
 ): array {
   store_decommission_assert_password_and_confirm($pdo, $actorUserId, $storeId, $password, $confirmText, 'request');
+  $requestedScheduleAt = store_decommission_validate_schedule_at($requestedScheduleAt);
 
   $store = store_decommission_fetch_store($pdo, $storeId);
   $lifecycle = (string)($store['lifecycle_status'] ?? 'active');
@@ -637,6 +986,9 @@ function store_decommission_approve(PDO $pdo, int $jobId, int $actorUserId, stri
     'decommission_approved_at' => $approvedAt,
   ]);
   store_decommission_log_step($pdo, $jobId, (int)$job['store_id'], 'approve', '廃棄承認', 'completed', $comment, [], $actorUserId);
+  if ((int)($job['batch_id'] ?? 0) > 0) {
+    store_decommission_refresh_batch_status($pdo, (int)$job['batch_id']);
+  }
 
   return ['job_id' => $jobId, 'status' => 'approved'];
 }
@@ -650,7 +1002,8 @@ function store_decommission_schedule(PDO $pdo, int $jobId, string $scheduledAt, 
   if (!in_array((string)$job['status'], ['requested', 'approved', 'scheduled'], true)) {
     throw new RuntimeException('スケジュール設定できる状態ではありません');
   }
-  if (!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $scheduledAt)) {
+  $scheduledAt = store_decommission_validate_schedule_at($scheduledAt) ?? '';
+  if ($scheduledAt === '') {
     throw new RuntimeException('scheduled_at は YYYY-MM-DD HH:MM:SS 形式で入力してください');
   }
 
@@ -670,6 +1023,9 @@ function store_decommission_schedule(PDO $pdo, int $jobId, string $scheduledAt, 
   store_decommission_log_step($pdo, $jobId, (int)$job['store_id'], 'schedule', '廃棄予約', 'completed', null, [
     'scheduled_at' => $scheduledAt,
   ], $actorUserId);
+  if ((int)($job['batch_id'] ?? 0) > 0) {
+    store_decommission_refresh_batch_status($pdo, (int)$job['batch_id']);
+  }
 
   return ['job_id' => $jobId, 'status' => 'scheduled', 'scheduled_at' => $scheduledAt];
 }
@@ -683,7 +1039,7 @@ function store_decommission_cancel(PDO $pdo, int $jobId, int $actorUserId, strin
 
   store_decommission_assert_password_and_confirm($pdo, $actorUserId, (int)$job['store_id'], $password, $confirmText, 'cancel');
 
-  if (in_array((string)$job['status'], ['running', 'completed', 'cancelled'], true)) {
+  if (in_array((string)$job['status'], ['running', 'completed', 'dry_run_completed', 'cancelled'], true)) {
     throw new RuntimeException('キャンセルできる状態ではありません');
   }
 
@@ -702,6 +1058,9 @@ function store_decommission_cancel(PDO $pdo, int $jobId, int $actorUserId, strin
     'decommission_scheduled_at' => null,
   ]);
   store_decommission_log_step($pdo, $jobId, (int)$job['store_id'], 'cancel', '廃棄キャンセル', 'completed', $reason, [], $actorUserId);
+  if ((int)($job['batch_id'] ?? 0) > 0) {
+    store_decommission_refresh_batch_status($pdo, (int)$job['batch_id']);
+  }
 
   return ['job_id' => $jobId, 'status' => 'cancelled'];
 }
@@ -798,6 +1157,29 @@ function store_decommission_mark_job_failed(PDO $pdo, int $jobId, string $reason
   ")->execute([$reason, $jobId]);
 }
 
+function store_decommission_mark_job_dry_run_completed(PDO $pdo, int $jobId, int $actorUserId): void
+{
+  $job = store_decommission_fetch_job($pdo, $jobId);
+  if (!$job) {
+    throw new RuntimeException('ジョブが見つかりません');
+  }
+
+  $pdo->prepare("
+    UPDATE store_decommission_jobs
+    SET status = 'dry_run_completed',
+        executed_by = ?,
+        completed_at = NOW(),
+        updated_at = NOW()
+    WHERE id = ?
+    LIMIT 1
+  ")->execute([$actorUserId > 0 ? $actorUserId : null, $jobId]);
+
+  store_decommission_update_store_lifecycle($pdo, (int)$job['store_id'], 'suspended', [
+    'decommission_scheduled_at' => null,
+    'decommission_completed_at' => null,
+  ]);
+}
+
 function store_decommission_mark_job_completed(PDO $pdo, int $jobId, int $actorUserId): void
 {
   $job = store_decommission_fetch_job($pdo, $jobId);
@@ -820,6 +1202,25 @@ function store_decommission_mark_job_completed(PDO $pdo, int $jobId, int $actorU
   ]);
 }
 
+function store_decommission_count_rows_for_store(PDO $pdo, string $table, int $storeId): int
+{
+  if (!store_decommission_column_exists($pdo, $table, 'store_id')) {
+    throw new RuntimeException("store_id カラムがないため処理できません: {$table}");
+  }
+  $st = $pdo->prepare("SELECT COUNT(*) FROM `{$table}` WHERE store_id = ?");
+  $st->execute([$storeId]);
+  return (int)$st->fetchColumn();
+}
+
+function store_decommission_delete_rows_for_store(PDO $pdo, string $table, int $storeId): void
+{
+  if (!store_decommission_column_exists($pdo, $table, 'store_id')) {
+    throw new RuntimeException("store_id カラムがないため削除できません: {$table}");
+  }
+  $st = $pdo->prepare("DELETE FROM `{$table}` WHERE store_id = ?");
+  $st->execute([$storeId]);
+}
+
 function store_decommission_collect_due_jobs(PDO $pdo, int $limit = 10): array
 {
   $limit = max(1, min(100, $limit));
@@ -835,7 +1236,7 @@ function store_decommission_collect_due_jobs(PDO $pdo, int $limit = 10): array
   return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
 
-function store_decommission_execute_job(PDO $pdo, int $jobId, bool $dryRun = true, int $systemUserId = 0): array
+function store_decommission_execute_job(PDO $pdo, int $jobId, bool $dryRun = true, int $systemUserId = 0, bool $persistDryRun = false): array
 {
   $job = store_decommission_fetch_job($pdo, $jobId);
   if (!$job) {
@@ -843,13 +1244,21 @@ function store_decommission_execute_job(PDO $pdo, int $jobId, bool $dryRun = tru
   }
 
   $storeId = (int)$job['store_id'];
+  $batchId = (int)($job['batch_id'] ?? 0);
+  $batch = $batchId > 0 ? store_decommission_fetch_batch($pdo, $batchId) : null;
+  $effectiveDryRun = $dryRun || ($batch && (int)($batch['dry_run'] ?? 0) === 1);
   $plan = store_decommission_build_delete_plan($pdo);
   $ignored = store_decommission_ignored_tables($pdo);
   $result = ['deleted' => [], 'skipped' => [], 'ignored' => []];
 
   store_decommission_mark_job_running($pdo, $jobId);
-  store_decommission_log_step($pdo, $jobId, $storeId, 'runner.start', '廃棄実行開始', 'started', $dryRun ? 'dry-run' : 'execute', [
-    'dry_run' => $dryRun,
+  if ($batchId > 0) {
+    store_decommission_mark_batch_running($pdo, $batchId);
+  }
+  store_decommission_log_step($pdo, $jobId, $storeId, 'runner.start', '廃棄実行開始', 'started', $effectiveDryRun ? 'dry-run' : 'execute', [
+    'dry_run' => $effectiveDryRun,
+    'persist_dry_run' => $persistDryRun,
+    'batch_id' => $batchId > 0 ? $batchId : null,
     'planned_tables' => array_column($plan, 'table'),
     'ignored_tables' => array_column($ignored, 'table'),
   ], $systemUserId > 0 ? $systemUserId : null);
@@ -869,9 +1278,7 @@ function store_decommission_execute_job(PDO $pdo, int $jobId, bool $dryRun = tru
       $label = 'Delete ' . $table;
       store_decommission_log_step($pdo, $jobId, $storeId, 'delete.' . $table, $label, 'started', null, [], $systemUserId ?: null);
 
-      $countSt = $pdo->prepare("SELECT COUNT(*) FROM `{$table}` WHERE store_id = ?");
-      $countSt->execute([$storeId]);
-      $count = (int)$countSt->fetchColumn();
+      $count = store_decommission_count_rows_for_store($pdo, $table, $storeId);
 
       if ($count === 0) {
         store_decommission_log_step($pdo, $jobId, $storeId, 'delete.' . $table, $label, 'completed', '0 rows', [
@@ -881,19 +1288,18 @@ function store_decommission_execute_job(PDO $pdo, int $jobId, bool $dryRun = tru
         continue;
       }
 
-      if (!$dryRun) {
-        $del = $pdo->prepare("DELETE FROM `{$table}` WHERE store_id = ?");
-        $del->execute([$storeId]);
+      if (!$effectiveDryRun) {
+        store_decommission_delete_rows_for_store($pdo, $table, $storeId);
       }
 
-      store_decommission_log_step($pdo, $jobId, $storeId, 'delete.' . $table, $label, 'completed', $dryRun ? 'dry-run' : null, [
+      store_decommission_log_step($pdo, $jobId, $storeId, 'delete.' . $table, $label, 'completed', $effectiveDryRun ? 'dry-run' : null, [
         'rows' => $count,
-        'dry_run' => $dryRun,
+        'dry_run' => $effectiveDryRun,
       ], $systemUserId ?: null);
       $result['deleted'][$table] = $count;
     }
 
-    if ($dryRun) {
+    if ($effectiveDryRun && !$persistDryRun) {
       $pdo->prepare("
         UPDATE store_decommission_jobs
         SET status = 'scheduled',
@@ -902,22 +1308,30 @@ function store_decommission_execute_job(PDO $pdo, int $jobId, bool $dryRun = tru
         WHERE id = ?
         LIMIT 1
       ")->execute([$jobId]);
+    } elseif ($effectiveDryRun) {
+      store_decommission_mark_job_dry_run_completed($pdo, $jobId, $systemUserId);
     } else {
       store_decommission_mark_job_completed($pdo, $jobId, $systemUserId);
     }
 
     store_decommission_log_step($pdo, $jobId, $storeId, 'runner.finish', '廃棄実行完了', 'completed', null, [
-      'dry_run' => $dryRun,
+      'dry_run' => $effectiveDryRun,
       'deleted_tables' => array_keys($result['deleted']),
       'ignored_tables' => $result['ignored'],
     ], $systemUserId ?: null);
+    if ($batchId > 0) {
+      store_decommission_refresh_batch_status($pdo, $batchId);
+    }
 
     return $result;
   } catch (Throwable $e) {
     store_decommission_mark_job_failed($pdo, $jobId, $e->getMessage());
     store_decommission_log_step($pdo, $jobId, $storeId, 'runner.finish', '廃棄実行完了', 'failed', $e->getMessage(), [
-      'dry_run' => $dryRun,
+      'dry_run' => $effectiveDryRun,
     ], $systemUserId ?: null);
+    if ($batchId > 0) {
+      store_decommission_refresh_batch_status($pdo, $batchId);
+    }
     throw $e;
   }
 }

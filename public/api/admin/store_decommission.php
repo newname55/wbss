@@ -55,6 +55,19 @@ try {
     ]);
   }
 
+  if ($action === 'batch_list' && $method === 'GET') {
+    store_decommission_api_out([
+      'ok' => true,
+      'batches' => store_decommission_list_batches($pdo, (int)($input['limit'] ?? 20)),
+    ]);
+  }
+
+  if ($action === 'batch_progress' && $method === 'GET') {
+    $batchId = (int)($input['batch_id'] ?? 0);
+    $payload = store_decommission_batch_progress($pdo, $batchId);
+    store_decommission_api_out(['ok' => true] + $payload);
+  }
+
   if ($action === 'logs' && $method === 'GET') {
     $jobId = (int)($input['job_id'] ?? 0);
     $job = store_decommission_fetch_job($pdo, $jobId);
@@ -100,6 +113,20 @@ try {
       ($input['requested_schedule_at'] ?? '') !== '' ? (string)$input['requested_schedule_at'] : null
     );
     store_decommission_api_out(['ok' => true, 'message' => '廃棄申請を受け付けました'] + $result);
+  }
+
+  if ($action === 'batch_create' && $method === 'POST') {
+    $result = store_decommission_create_batch(
+      $pdo,
+      (array)($input['store_ids'] ?? []),
+      $actorUserId,
+      (string)($input['password'] ?? ''),
+      trim((string)($input['reason'] ?? '')),
+      ($input['scheduled_at'] ?? '') !== '' ? (string)$input['scheduled_at'] : null,
+      !empty($input['dry_run'])
+    );
+    $payload = store_decommission_batch_progress($pdo, (int)$result['batch_id']);
+    store_decommission_api_out(['ok' => true, 'message' => 'batch を作成しました'] + $result + $payload);
   }
 
   if ($action === 'approve' && $method === 'POST') {
