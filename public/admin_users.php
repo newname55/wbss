@@ -115,8 +115,55 @@ function fetch_user(PDO $pdo, int $id): ?array {
   return $u ?: null;
 }
 
+function role_col_exists(PDO $pdo, string $column): bool {
+  $st = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'roles'
+      AND COLUMN_NAME = ?
+  ");
+  $st->execute([$column]);
+  return ((int)$st->fetchColumn() > 0);
+}
+
+function ensure_admin_users_roles(PDO $pdo): void {
+  $requiredRoles = [
+    ROLE_ALL_STORE_SHIFT_VIEW => '全店出勤予定ビュー',
+  ];
+
+  foreach ($requiredRoles as $code => $name) {
+    $st = $pdo->prepare("SELECT id FROM roles WHERE code = ? LIMIT 1");
+    $st->execute([$code]);
+    if ($st->fetchColumn()) {
+      continue;
+    }
+
+    $columns = ['code', 'name'];
+    $values = [':code' => $code, ':name' => $name];
+    if (role_col_exists($pdo, 'created_at')) {
+      $columns[] = 'created_at';
+      $values[':created_at'] = now_jst();
+    }
+    if (role_col_exists($pdo, 'updated_at')) {
+      $columns[] = 'updated_at';
+      $values[':updated_at'] = now_jst();
+    }
+
+    $placeholders = [];
+    foreach ($columns as $column) {
+      $placeholders[] = ':' . $column;
+    }
+
+    $sql = "INSERT INTO roles (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
+    $ins = $pdo->prepare($sql);
+    $ins->execute($values);
+  }
+}
+
 /** roles */
 function fetch_roles(PDO $pdo): array {
+  ensure_admin_users_roles($pdo);
   $st = $pdo->query("SELECT id, code, name FROM roles ORDER BY id ASC");
   return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }

@@ -12,7 +12,7 @@ require_once __DIR__ . '/../app/repo_casts.php';
 require_once __DIR__ . '/../app/store.php';
 
 require_login();
-require_role(['admin', 'manager', 'super_user']);
+require_role(['admin', 'manager', 'super_user', ROLE_ALL_STORE_SHIFT_VIEW]);
 
 if (!function_exists('h')) {
   function h(string $s): string {
@@ -142,10 +142,9 @@ function shift_plan_tab_counts(PDO $pdo, array $storeIds, string $date): array {
 
 function shift_plan_allowed_stores(PDO $pdo): array {
   $userId = function_exists('current_user_id') ? (int)current_user_id() : (int)($_SESSION['user_id'] ?? 0);
-  $isSuper = function_exists('is_role') && is_role('super_user');
-  $isAdmin = function_exists('is_role') && is_role('admin');
+  $canViewAll = function_exists('can_view_all_store_shift') && can_view_all_store_shift();
 
-  if ($isSuper || $isAdmin) {
+  if ($canViewAll) {
     $st = $pdo->query("
       SELECT id, name
       FROM stores

@@ -26,6 +26,7 @@ $isSuper   = has_role('super_user');
 $isAdmin   = has_role('admin');
 $isManager = has_role('manager');
 $isCast    = has_role('cast');
+$canViewAllStoreShift = function_exists('can_view_all_store_shift') ? can_view_all_store_shift() : ($isSuper || $isAdmin);
 
 // cast専用へ
 if ($isCast && !$isAdmin && !$isManager && !$isSuper) {
@@ -277,14 +278,6 @@ $adminControlItems = [
     'tone' => 'primary',
   ],
   [
-    'icon' => '🗂️',
-    'title' => '全店出勤予定ビュー',
-    'desc' => '店舗タブを切り替えながら、その日の出勤予定を確認します。',
-    'href' => '/wbss/public/all_store_shift_plans.php',
-    'tag'  => '全店予定',
-    'tone' => 'primary',
-  ],
-  [
     'icon' => '🧑‍💼',
     'title' => '全店キャストKPI',
     'desc' => '全店舗のキャスト売上寄与と勤務実績を比較します。',
@@ -402,10 +395,12 @@ $adminSections = [
       ],
       [
         'icon' => '🗂️',
-        'title' => '店舗別の出勤予定を見る',
-        'desc' => '店舗タブで切り替えながら、その日の出勤予定を確認します。',
+        'title' => $canViewAllStoreShift ? '全店出勤予定ビュー' : '店舗別の出勤予定を見る',
+        'desc' => $canViewAllStoreShift
+          ? '店舗タブを切り替えながら、全店舗分の出勤予定を確認します。'
+          : '店舗タブで切り替えながら、その日の出勤予定を確認します。',
         'href' => dashboard_link('/wbss/public/all_store_shift_plans.php', $storeId),
-        'tag'  => '予定ビュー',
+        'tag'  => $canViewAllStoreShift ? '全店予定' : '予定ビュー',
         'tone' => 'primary',
       ],
       [
@@ -552,10 +547,12 @@ $managerSections = [
       ],
       [
         'icon' => '🗂️',
-        'title' => '店舗別の出勤予定を見る',
-        'desc' => '自分が見られる店舗の出勤予定をタブで確認します。',
+        'title' => $canViewAllStoreShift ? '全店出勤予定ビュー' : '店舗別の出勤予定を見る',
+        'desc' => $canViewAllStoreShift
+          ? '全店舗の出勤予定をタブで確認します。売上の全店ビューは含みません。'
+          : '自分が見られる店舗の出勤予定をタブで確認します。',
         'href' => dashboard_link('/wbss/public/all_store_shift_plans.php', $storeId),
-        'tag'  => '予定ビュー',
+        'tag'  => $canViewAllStoreShift ? '全店予定' : '予定ビュー',
         'tone' => 'primary',
       ],
       [
