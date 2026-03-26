@@ -20,9 +20,14 @@ function transport_map_direction_options(): array {
 
 function transport_map_table_exists(PDO $pdo, string $tableName): bool {
   try {
-    $st = $pdo->prepare("SHOW TABLES LIKE ?");
+    $st = $pdo->prepare("
+      SELECT COUNT(*)
+      FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+    ");
     $st->execute([$tableName]);
-    return (bool)$st->fetchColumn();
+    return ((int)$st->fetchColumn() > 0);
   } catch (Throwable $e) {
     return false;
   }
