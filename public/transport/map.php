@@ -58,7 +58,7 @@ render_header('送迎マップ', [
   'right_html' => $rightHtml,
 ]);
 ?>
-<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327c">
+<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327d">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="">
@@ -219,7 +219,7 @@ render_header('送迎マップ', [
         <div class="transportMapListHead">
           <div>
             <div class="cardTitle">送迎一覧</div>
-            <div class="muted">行を押すと地図で対象を強調します</div>
+            <div class="muted">行を押すと地図で対象を強調し、その場でドライバー割当もできます</div>
           </div>
           <div class="transportMapListLegend">
             <?php foreach (transport_map_status_definitions() as $status => $meta): ?>
@@ -258,5 +258,5 @@ window.WBSS_TRANSPORT_MAP_CONFIG = <?= json_encode([
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-<script src="/wbss/public/assets/js/transport-map.js?v=20260327c"></script>
+<script src="/wbss/public/assets/js/transport-map.js?v=20260327d"></script>
 <?php render_page_end(); ?>

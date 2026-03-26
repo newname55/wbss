@@ -25,6 +25,22 @@ function transport_map_api_error(string $message, int $statusCode = 400, ?array 
 
 try {
   $pdo = db();
+  if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    csrf_verify($_POST['csrf_token'] ?? null);
+    $action = trim((string)($_POST['action'] ?? ''));
+    if ($action !== 'save_assignment') {
+      transport_map_api_error('不正な操作です', 400);
+    }
+
+    $item = transport_map_save_assignment($pdo, $_POST, (int)(current_user_id() ?? 0));
+    echo json_encode([
+      'ok' => true,
+      'message' => '送迎割当を保存しました',
+      'item' => $item,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+  }
+
   $filters = transport_map_filters_from_request($pdo, $_GET);
   $data = transport_map_fetch_data($pdo, $filters);
 

@@ -205,9 +205,326 @@ function transport_map_geocode_address(string $address): array {
   return transport_google_geocode($address);
 }
 
-function transport_map_fetch_rows(PDO $pdo, array $filters): array {
+function transport_map_fetch_required_candidates(PDO $pdo, int $storeId, string $businessDate): array {
+  $groups = transport_fetch_route_candidates($pdo, $businessDate, [$storeId]);
+  if ($groups === []) {
+    return [];
+  }
+
+  $group = $groups[0];
+  $items = [];
+  foreach ((array)($group['casts'] ?? []) as $cast) {
+    if (empty($cast['requires_pickup'])) {
+      continue;
+    }
+
+    $castId = (int)($cast['user_id'] ?? 0);
+    if ($castId <= 0) {
+      continue;
+    }
+
+    $items[$castId] = [
+      'id' => -1 * (1000000 + $castId),
+      'store_id' => $storeId,
+      'business_date' => $businessDate,
+      'cast_id' => $castId,
+      'pickup_name' => (string)($cast['display_name'] ?? ''),
+      'cast_name' => (string)($cast['display_name'] ?? ''),
+      'pickup_address' => (string)($cast['pickup_address'] ?? ''),
+      'pickup_lat' => ($cast['pickup_lat'] ?? null) !== null ? (float)$cast['pickup_lat'] : null,
+      'pickup_lng' => ($cast['pickup_lng'] ?? null) !== null ? (float)$cast['pickup_lng'] : null,
+      'pickup_note' => (string)($cast['pickup_note'] ?? ''),
+      'pickup_time_from' => (string)($cast['start_time'] ?? ''),
+      'pickup_time_to' => '',
+      'area_name' => '',
+      'direction_bucket' => '',
+      'status' => 'pending',
+      'driver_user_id' => null,
+      'driver_name' => '',
+      'vehicle_label' => null,
+      'sort_order' => 0,
+      'source_type' => 'shift_plan',
+      'pickup_target' => (string)($cast['pickup_target'] ?? 'primary'),
+      'pickup_target_label' => (string)($cast['pickup_target_label'] ?? transport_pickup_target_label((string)($cast['pickup_target'] ?? 'primary'))),
+      'has_coords' => !empty($cast['has_coords']),
+      'has_address' => !empty($cast['has_address']),
+    ];
+  }
+
+  return $items;
+}
+
+function transport_map_normalize_driver_user_id($value): ?int {
+  if ($value === null || $value === '') {
+    return null;
+  }
+  if (!is_numeric($value)) {
+    throw new RuntimeException('ドライバー指定が不正です');
+  }
+  $driverUserId = (int)$value;
+  return $driverUserId > 0 ? $driverUserId : null;
+}
+
+function transport_map_validate_driver_user_id(PDO $pdo, int $storeId, ?int $driverUserId): void {
+  if ($driverUserId === null) {
+    return;
+  }
+  foreach (transport_map_fetch_driver_options($pdo, $storeId) as $driver) {
+    if ((int)($driver['id'] ?? 0) === $driverUserId) {
+      return;
+    }
+  }
+  throw new RuntimeException('指定されたドライバーはこの店舗で割り当てできません');
+}
+
+function transport_map_normalize_vehicle_label(?string $value): ?string {
+  $value = trim((string)$value);
+  if ($value === '') {
+    return null;
+  }
+  return mb_substr($value, 0, 64);
+}
+
+function transport_map_fetch_assignment_by_cast(PDO $pdo, int $storeId, string $businessDate, int $castId): ?array {
+  $st = $pdo->prepare("
+    SELECT *
+    FROM transport_assignments
+    WHERE store_id = ?
+      AND business_date = ?
+      AND cast_id = ?
+    LIMIT 1
+  ");
+  $st->execute([$storeId, $businessDate, $castId]);
+  $row = $st->fetch(PDO::FETCH_ASSOC);
+  return $row ?: null;
+}
+
+function transport_map_resolve_assignment_status(?string $requestedStatus, ?int $driverUserId, string $fallbackStatus): string {
+  $status = transport_map_normalize_status($requestedStatus);
+  if ($status === '') {
+    if ($driverUserId === null) {
+      return in_array($fallbackStatus, ['in_progress', 'done', 'cancelled'], true) ? $fallbackStatus : 'pending';
+    }
+    return $fallbackStatus === 'pending' ? 'assigned' : $fallbackStatus;
+  }
+
+  if ($driverUserId === null && in_array($status, ['assigned', 'in_progress', 'done'], true)) {
+    throw new RuntimeException('ドライバー未割当ではこのステータスにできません');
+  }
+
+  return $status;
+}
+
+function transport_map_log_assignment_change(PDO $pdo, int $assignmentId, int $storeId, string $action, int $actorUserId, ?array $before, ?array $after): void {
+  if (!transport_map_table_exists($pdo, 'transport_assignment_logs')) {
+    return;
+  }
+
+  $st = $pdo->prepare("
+    INSERT INTO transport_assignment_logs (
+      assignment_id,
+      store_id,
+      action,
+      actor_user_id,
+      before_json,
+      after_json
+    ) VALUES (
+      :assignment_id,
+      :store_id,
+      :action,
+      :actor_user_id,
+      :before_json,
+      :after_json
+    )
+  ");
+  $st->execute([
+    ':assignment_id' => $assignmentId,
+    ':store_id' => $storeId,
+    ':action' => $action,
+    ':actor_user_id' => $actorUserId > 0 ? $actorUserId : null,
+    ':before_json' => $before !== null ? json_encode($before, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+    ':after_json' => $after !== null ? json_encode($after, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+  ]);
+}
+
+function transport_map_save_assignment(PDO $pdo, array $source, int $actorUserId): array {
   if (!transport_map_table_exists($pdo, 'transport_assignments')) {
     throw new RuntimeException('transport_assignments テーブルが未作成です。先にSQLを適用してください。');
+  }
+
+  $storeId = transport_resolve_store_id($pdo, (int)($source['store_id'] ?? 0));
+  $storeRow = transport_map_fetch_store_row($pdo, $storeId);
+  $businessDate = transport_map_normalize_date((string)($source['business_date'] ?? ''), transport_map_default_business_date($storeRow));
+  $castId = (int)($source['cast_id'] ?? 0);
+  if ($castId <= 0) {
+    throw new RuntimeException('送迎対象のキャストを特定できません');
+  }
+
+  $driverUserId = transport_map_normalize_driver_user_id($source['driver_user_id'] ?? null);
+  transport_map_validate_driver_user_id($pdo, $storeId, $driverUserId);
+  $vehicleLabel = transport_map_normalize_vehicle_label((string)($source['vehicle_label'] ?? ''));
+
+  $pdo->beginTransaction();
+  try {
+    $existing = transport_map_fetch_assignment_by_cast($pdo, $storeId, $businessDate, $castId);
+    $action = 'update';
+    $assignmentId = 0;
+
+    if ($existing) {
+      $nextStatus = transport_map_resolve_assignment_status((string)($source['status'] ?? ''), $driverUserId, (string)($existing['status'] ?? 'pending'));
+      $assignmentId = (int)($existing['id'] ?? 0);
+      $st = $pdo->prepare("
+        UPDATE transport_assignments
+        SET driver_user_id = :driver_user_id,
+            status = :status,
+            vehicle_label = :vehicle_label,
+            updated_by_user_id = :updated_by_user_id,
+            updated_at = NOW()
+        WHERE id = :id
+          AND store_id = :store_id
+      ");
+      $st->execute([
+        ':driver_user_id' => $driverUserId,
+        ':status' => $nextStatus,
+        ':vehicle_label' => $vehicleLabel,
+        ':updated_by_user_id' => $actorUserId > 0 ? $actorUserId : null,
+        ':id' => $assignmentId,
+        ':store_id' => $storeId,
+      ]);
+    } else {
+      $candidates = transport_map_fetch_required_candidates($pdo, $storeId, $businessDate);
+      $candidate = $candidates[$castId] ?? null;
+      if (!$candidate) {
+        throw new RuntimeException('勤務予定ベースの送迎対象データが見つかりません');
+      }
+      if (trim((string)($candidate['pickup_address'] ?? '')) === '') {
+        throw new RuntimeException('住所未登録のため送迎割当を保存できません');
+      }
+
+      $base = transport_map_fetch_base_context($pdo, $storeId);
+      $directionBucket = transport_map_compute_direction(
+        $base['lat'],
+        $base['lng'],
+        ($candidate['pickup_lat'] ?? null) !== null ? (float)$candidate['pickup_lat'] : null,
+        ($candidate['pickup_lng'] ?? null) !== null ? (float)$candidate['pickup_lng'] : null,
+        (string)($candidate['area_name'] ?? '')
+      );
+      $nextStatus = transport_map_resolve_assignment_status((string)($source['status'] ?? ''), $driverUserId, 'pending');
+
+      $st = $pdo->prepare("
+        INSERT INTO transport_assignments (
+          store_id,
+          business_date,
+          cast_id,
+          pickup_name,
+          pickup_address,
+          pickup_lat,
+          pickup_lng,
+          pickup_note,
+          pickup_time_from,
+          pickup_time_to,
+          area_name,
+          direction_bucket,
+          status,
+          driver_user_id,
+          vehicle_label,
+          sort_order,
+          source_type,
+          created_by_user_id,
+          updated_by_user_id
+        ) VALUES (
+          :store_id,
+          :business_date,
+          :cast_id,
+          :pickup_name,
+          :pickup_address,
+          :pickup_lat,
+          :pickup_lng,
+          :pickup_note,
+          :pickup_time_from,
+          :pickup_time_to,
+          :area_name,
+          :direction_bucket,
+          :status,
+          :driver_user_id,
+          :vehicle_label,
+          :sort_order,
+          :source_type,
+          :created_by_user_id,
+          :updated_by_user_id
+        )
+      ");
+      $st->execute([
+        ':store_id' => $storeId,
+        ':business_date' => $businessDate,
+        ':cast_id' => $castId,
+        ':pickup_name' => (string)($candidate['pickup_name'] ?? ''),
+        ':pickup_address' => (string)($candidate['pickup_address'] ?? ''),
+        ':pickup_lat' => $candidate['pickup_lat'] ?? null,
+        ':pickup_lng' => $candidate['pickup_lng'] ?? null,
+        ':pickup_note' => (string)($candidate['pickup_note'] ?? ''),
+        ':pickup_time_from' => (string)($candidate['pickup_time_from'] ?? '') !== '' ? (string)$candidate['pickup_time_from'] : null,
+        ':pickup_time_to' => (string)($candidate['pickup_time_to'] ?? '') !== '' ? (string)$candidate['pickup_time_to'] : null,
+        ':area_name' => (string)($candidate['area_name'] ?? ''),
+        ':direction_bucket' => $directionBucket !== '' ? $directionBucket : null,
+        ':status' => $nextStatus,
+        ':driver_user_id' => $driverUserId,
+        ':vehicle_label' => $vehicleLabel,
+        ':sort_order' => (int)($candidate['sort_order'] ?? 0),
+        ':source_type' => 'shift_plan',
+        ':created_by_user_id' => $actorUserId > 0 ? $actorUserId : null,
+        ':updated_by_user_id' => $actorUserId > 0 ? $actorUserId : null,
+      ]);
+      $assignmentId = (int)$pdo->lastInsertId();
+      $action = 'create';
+      $existing = null;
+    }
+
+    $after = transport_map_fetch_assignment_by_cast($pdo, $storeId, $businessDate, $castId);
+    if (!$after || (int)($after['id'] ?? 0) <= 0) {
+      throw new RuntimeException('送迎割当の保存後データを取得できませんでした');
+    }
+
+    transport_map_log_assignment_change(
+      $pdo,
+      (int)$after['id'],
+      $storeId,
+      $action,
+      $actorUserId,
+      $existing,
+      $after
+    );
+
+    $pdo->commit();
+  } catch (Throwable $e) {
+    if ($pdo->inTransaction()) {
+      $pdo->rollBack();
+    }
+    throw $e;
+  }
+
+  $data = transport_map_fetch_data($pdo, [
+    'store_id' => $storeId,
+    'business_date' => $businessDate,
+    'status' => '',
+    'driver_user_id' => 0,
+    'direction_bucket' => '',
+    'unassigned_only' => 0,
+    'time_from' => '',
+    'time_to' => '',
+  ]);
+  foreach ((array)($data['items'] ?? []) as $item) {
+    if ((int)($item['cast_id'] ?? 0) === $castId) {
+      return $item;
+    }
+  }
+
+  throw new RuntimeException('保存後の送迎データを一覧へ反映できませんでした');
+}
+
+function transport_map_fetch_rows(PDO $pdo, array $filters): array {
+  if (!transport_map_table_exists($pdo, 'transport_assignments')) {
+    return [];
   }
 
   $where = [
@@ -290,7 +607,18 @@ function transport_map_fetch_rows(PDO $pdo, array $filters): array {
 function transport_map_fetch_data(PDO $pdo, array $filters): array {
   $base = transport_map_fetch_base_context($pdo, (int)$filters['store_id']);
   $rows = transport_map_fetch_rows($pdo, $filters);
+  $requiredCandidates = transport_map_fetch_required_candidates($pdo, (int)$filters['store_id'], (string)$filters['business_date']);
   $canViewFullAddress = transport_map_can_view_full_address();
+
+  foreach ($rows as $row) {
+    $castId = (int)($row['cast_id'] ?? 0);
+    if ($castId > 0 && isset($requiredCandidates[$castId])) {
+      unset($requiredCandidates[$castId]);
+    }
+  }
+  if ($requiredCandidates !== []) {
+    $rows = array_merge($rows, array_values($requiredCandidates));
+  }
 
   $items = [];
   $summary = [
@@ -354,6 +682,9 @@ function transport_map_fetch_data(PDO $pdo, array $filters): array {
       'distance_km' => $distanceKm,
       'sort_order' => (int)($row['sort_order'] ?? 0),
       'note_exists' => trim((string)($row['pickup_note'] ?? '')) !== '',
+      'source_type' => (string)($row['source_type'] ?? 'assignment'),
+      'pickup_target' => (string)($row['pickup_target'] ?? 'primary'),
+      'pickup_target_label' => (string)($row['pickup_target_label'] ?? transport_pickup_target_label((string)($row['pickup_target'] ?? 'primary'))),
       'route_hint' => [
         'direction_bucket' => $direction,
         'distance_km' => $distanceKm,
