@@ -277,6 +277,14 @@ $adminControlItems = [
     'tone' => 'primary',
   ],
   [
+    'icon' => '🗂️',
+    'title' => '全店出勤予定ビュー',
+    'desc' => '店舗タブを切り替えながら、その日の出勤予定を確認します。',
+    'href' => '/wbss/public/all_store_shift_plans.php',
+    'tag'  => '全店予定',
+    'tone' => 'primary',
+  ],
+  [
     'icon' => '🧑‍💼',
     'title' => '全店キャストKPI',
     'desc' => '全店舗のキャスト売上寄与と勤務実績を比較します。',
@@ -391,6 +399,14 @@ $adminSections = [
         'desc' => '遅刻や欠勤の連絡をまとめて確認します。',
         'href' => dashboard_link('/wbss/public/manager_today_schedule.php', $storeId),
         'tag'  => '今日',
+      ],
+      [
+        'icon' => '🗂️',
+        'title' => '店舗別の出勤予定を見る',
+        'desc' => '店舗タブで切り替えながら、その日の出勤予定を確認します。',
+        'href' => dashboard_link('/wbss/public/all_store_shift_plans.php', $storeId),
+        'tag'  => '予定ビュー',
+        'tone' => 'primary',
       ],
       [
         'icon' => '👥',
@@ -532,6 +548,14 @@ $managerSections = [
         'desc' => '今週のシフトを見たり調整したりします。',
         'href' => dashboard_link('/wbss/public/cast_week_plans.php', $storeId),
         'tag'  => 'シフト',
+        'tone' => 'primary',
+      ],
+      [
+        'icon' => '🗂️',
+        'title' => '店舗別の出勤予定を見る',
+        'desc' => '自分が見られる店舗の出勤予定をタブで確認します。',
+        'href' => dashboard_link('/wbss/public/all_store_shift_plans.php', $storeId),
+        'tag'  => '予定ビュー',
         'tone' => 'primary',
       ],
       [
