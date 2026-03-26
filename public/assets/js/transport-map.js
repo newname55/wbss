@@ -6,6 +6,7 @@
   const driversByStore = configRoot.driversByStore || {};
   const apiUrl = pageConfig.apiUrl || '/wbss/public/api/transport_map.php';
   const statusOptions = pageConfig.statusOptions || {};
+  const focusCastId = Number(pageConfig.focusCastId || 0);
   const form = document.getElementById('transportMapFilterForm');
   const reloadButton = document.getElementById('transportMapReload');
   const storeSelect = document.getElementById('transportMapStore');
@@ -36,6 +37,7 @@
   let markerById = new Map();
   let rowById = new Map();
   let itemById = new Map();
+  let itemIdByCastId = new Map();
   let activeId = null;
   let lastFetchSeq = 0;
 
@@ -132,6 +134,7 @@
     markerById = markerById || new Map();
     rowById = new Map();
     itemById = new Map();
+    itemIdByCastId = new Map();
 
     if (!items.length) {
       listEl.innerHTML = '<div class="transportMapEmpty">条件に一致する送迎対象はありません。</div>';
@@ -140,6 +143,9 @@
 
     listEl.innerHTML = items.map(function (item) {
       itemById.set(item.id, item);
+      if (Number(item.cast_id || 0) > 0) {
+        itemIdByCastId.set(Number(item.cast_id), item.id);
+      }
       const status = statusOptions[item.status] || {};
       const unassignedClass = item.driver_user_id === null ? ' is-unassigned' : '';
       const noCoordsClass = item.has_coords ? '' : ' is-disabled';
@@ -275,6 +281,15 @@
         marker.openPopup();
       }
     }
+  }
+
+  function focusCast(castId, openPopup) {
+    const itemId = itemIdByCastId.get(Number(castId || 0));
+    if (!itemId) {
+      return false;
+    }
+    focusItem(itemId, openPopup);
+    return true;
   }
 
   function buildStatusIcon(status, isUnassigned) {
@@ -440,6 +455,9 @@
       renderSummary(json.summary || {});
       renderList(json.items || []);
       renderMap(json.base || {}, json.items || []);
+      if (focusCastId > 0 && activeId === null) {
+        focusCast(focusCastId, true);
+      }
 
       if (pushHistory) {
         const nextUrl = '/wbss/public/transport/map.php?' + params.toString();
