@@ -1408,7 +1408,7 @@
     } catch (error) {
       const message = String((error && error.message) || '提案確定に失敗しました');
       setSuggestStatus(message, true);
-      if (message.indexOf('対象店舗が不正です') === -1) {
+      if (message.indexOf('対象店舗が不正です') === -1 && message.indexOf('保存できない提案') === -1) {
         window.alert(message);
       }
     } finally {
