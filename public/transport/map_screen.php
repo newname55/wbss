@@ -59,7 +59,7 @@ $pageConfig = [
 
 render_page_start('送迎マップ TV');
 ?>
-<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327k">
+<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327l">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="">
@@ -117,22 +117,31 @@ render_page_start('送迎マップ TV');
         <input type="hidden" name="direction_bucket" value="<?= h((string)($initialFilters['direction_bucket'] ?? '')) ?>">
         <input type="hidden" name="unassigned_only" value="<?= h((string)($initialFilters['unassigned_only'] ?? '0')) ?>">
 
-        <div class="transportMapScreenHero">
-          <div class="transportMapScreenTitle">大画面マップ</div>
-          <div class="transportMapScreenMeta">
-            <span class="heroChip">店舗 <b><?= h($storeName !== '' ? $storeName : '-') ?></b></span>
-            <span class="heroChip">業務日 <b><?= h($businessDate !== '' ? $businessDate : '-') ?></b></span>
-            <span class="heroChip">60秒ごと自動更新</span>
-          </div>
-        </div>
-
         <div class="transportMapScreenActions">
           <button type="submit" class="btn">条件反映</button>
           <button type="button" class="btn btn-primary" id="transportMapReload">再読込</button>
         </div>
       </form>
+      <div class="transportMapDriverVisibility transportMapDriverVisibility--screen">
+        <div class="transportMapDriverVisibilityHead">
+          <span class="transportMapMiniHint">ドライバー表示切替</span>
+          <span class="transportMapMiniHint" data-vehicle-updated>車両更新 待機中</span>
+        </div>
+        <div class="transportMapDriverToggleList" data-driver-toggles>
+          <span class="transportMapEmptyInline">車両送信が始まると切替できます</span>
+        </div>
+      </div>
+    </section>
 
-      <div class="transportMapScreenSummaryLine transportPanel">
+    <section class="transportMapScreenCanvas transportPanel">
+      <div class="transportMapCanvasHead transportMapCanvasHead--screen">
+        <div class="transportMapMapBadge" id="transportMapMapBadge">読込中</div>
+      </div>
+      <div id="transportMapCanvas" class="transportMapCanvas transportMapCanvas--screen" aria-label="送迎マップ TV"></div>
+    </section>
+
+    <section class="transportMapScreenFooter transportPanel">
+      <div class="transportMapScreenSummaryLine">
         <span class="transportMapScreenMetric">
           <span class="transportMapScreenMetricLabel">今日の件数</span>
           <b class="transportMapScreenMetricValue" data-summary-total>0</b>
@@ -150,29 +159,12 @@ render_page_start('送迎マップ TV');
           <b class="transportMapScreenMetricValue" data-summary-done>0</b>
         </span>
       </div>
-
-      <div class="transportMapScreenMetaRow">
+      <div class="transportMapScreenFooterRow">
         <div class="transportMapChipList" data-direction-summary>
           <span class="transportMapEmptyInline">方面別件数を読み込み中です</span>
         </div>
-        <div class="transportMapDriverVisibility transportMapDriverVisibility--screen">
-          <div class="transportMapDriverVisibilityHead">
-            <span class="transportMapMiniHint">ドライバー表示切替</span>
-            <span class="transportMapMiniHint" data-vehicle-updated>車両更新 待機中</span>
-          </div>
-          <div class="transportMapDriverToggleList" data-driver-toggles>
-            <span class="transportMapEmptyInline">車両送信が始まると切替できます</span>
-          </div>
-        </div>
+        <div class="transportMapFootNote" id="transportMapFootNote">緯度経度がない対象は地図に表示されません。</div>
       </div>
-    </section>
-
-    <section class="transportMapScreenCanvas transportPanel">
-      <div class="transportMapCanvasHead transportMapCanvasHead--screen">
-        <div class="transportMapMapBadge" id="transportMapMapBadge">読込中</div>
-      </div>
-      <div id="transportMapCanvas" class="transportMapCanvas transportMapCanvas--screen" aria-label="送迎マップ TV"></div>
-      <div class="transportMapFootNote" id="transportMapFootNote">緯度経度がない対象は地図に表示されません。</div>
     </section>
 
     <div id="transportMapList" hidden></div>
@@ -187,7 +179,7 @@ window.WBSS_TRANSPORT_MAP_CONFIG = <?= json_encode([
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-<script src="/wbss/public/assets/js/transport-map.js?v=20260327k"></script>
+<script src="/wbss/public/assets/js/transport-map.js?v=20260327l"></script>
 <script>
 (function () {
   const toggle = document.getElementById('transportMapScreenMenuToggle');
