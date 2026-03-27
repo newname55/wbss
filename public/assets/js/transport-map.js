@@ -1286,7 +1286,7 @@
         summaryParts.push('保存失敗 ' + failedCount + '件');
       }
       setSuggestStatus(summaryParts.join(' / '), failedCount > 0);
-      if (failedCount > 0) {
+      if (failedCount > 0 && savedCount <= 0) {
         window.alert(summaryParts.join('\n') + '\n' + failedMessages.slice(0, 3).join('\n'));
       }
     } catch (error) {
