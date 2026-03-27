@@ -62,7 +62,7 @@ $pageConfig = [
 
 render_page_start('送迎マップ TV');
 ?>
-<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327u">
+<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327ah">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="">
@@ -80,6 +80,7 @@ render_page_start('送迎マップ TV');
       </div>
       <div class="transportMapScreenTopBarActions">
         <button type="button" class="miniBtn" id="transportMapScreenMenuToggle" aria-expanded="false" aria-controls="transportMapScreenDrawer">☰ 表示設定</button>
+        <button type="button" class="miniBtn" id="transportMapAutoRefreshToggle">自動更新ON</button>
         <a class="miniBtn" href="<?= h($selectedStoreId > 0 ? '/wbss/public/transport/map.php?store_id=' . (int)$selectedStoreId . '&business_date=' . urlencode($businessDate) : ($canViewAllStores ? '/wbss/public/transport/map.php?store_id=all&business_date=' . urlencode($businessDate) : '/wbss/public/dashboard.php')) ?>">通常表示</a>
         <?php if ($selectedStoreId > 0): ?>
           <a class="miniBtn" href="/wbss/public/transport/driver_location.php?store_id=<?= (int)$selectedStoreId ?>">現在地送信</a>
@@ -122,12 +123,20 @@ render_page_start('送迎マップ TV');
 
         <div class="transportMapScreenActions">
           <button type="button" class="btn" id="transportMapAutoAssign">自動提案</button>
+          <button type="button" class="btn" id="transportMapResetSuggestions">リセット</button>
           <button type="button" class="btn btn-primary" id="transportMapConfirmSuggestions">提案を確定</button>
           <button type="submit" class="btn">条件反映</button>
           <button type="button" class="btn btn-primary" id="transportMapReload">再読込</button>
         </div>
       </form>
       <div class="transportMapSuggestStatus" id="transportMapSuggestStatus">未割当へ提案を出せます</div>
+      <div class="transportMapSuggestRoutePanel" data-suggest-route-summary hidden>
+        <div class="transportMapDriverVisibilityHead">
+          <span class="transportMapMiniHint">提案ルート順</span>
+          <span class="transportMapMiniHint">ドライバーごとの回収順</span>
+        </div>
+        <div class="transportMapSuggestRouteList" data-suggest-route-list></div>
+      </div>
       <div class="transportMapDriverVisibility transportMapDriverVisibility--screen">
         <div class="transportMapDriverVisibilityHead">
           <span class="transportMapMiniHint">ドライバー表示切替</span>
@@ -185,7 +194,7 @@ window.WBSS_TRANSPORT_MAP_CONFIG = <?= json_encode([
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-<script src="/wbss/public/assets/js/transport-map.js?v=20260327ad"></script>
+<script src="/wbss/public/assets/js/transport-map.js?v=20260327aj"></script>
 <script>
 (function () {
   const toggle = document.getElementById('transportMapScreenMenuToggle');

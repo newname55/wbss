@@ -96,7 +96,7 @@ render_header('送迎マップ', [
   'right_html' => $rightHtml,
 ]);
 ?>
-<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327u">
+<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327ah">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="">
@@ -298,6 +298,7 @@ render_header('送迎マップ', [
         </div>
         <div class="transportMapSuggestActions">
           <button type="button" class="btn" id="transportMapAutoAssign">自動提案</button>
+          <button type="button" class="btn" id="transportMapResetSuggestions">リセット</button>
           <button type="button" class="btn btn-primary" id="transportMapConfirmSuggestions">提案を確定</button>
           <span class="transportMapSuggestStatus" id="transportMapSuggestStatus">未割当へ提案を出せます</span>
         </div>
@@ -329,5 +330,5 @@ window.WBSS_TRANSPORT_MAP_CONFIG = <?= json_encode([
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-<script src="/wbss/public/assets/js/transport-map.js?v=20260327ad"></script>
+<script src="/wbss/public/assets/js/transport-map.js?v=20260327aj"></script>
 <?php render_page_end(); ?>

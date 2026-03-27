@@ -22,8 +22,12 @@
   const driverToggleEl = document.querySelector('[data-driver-toggles]');
   const vehicleUpdatedEl = document.querySelector('[data-vehicle-updated]');
   const autoAssignButton = document.getElementById('transportMapAutoAssign');
+  const resetSuggestionsButton = document.getElementById('transportMapResetSuggestions');
   const confirmSuggestionsButton = document.getElementById('transportMapConfirmSuggestions');
   const suggestStatusEl = document.getElementById('transportMapSuggestStatus');
+  const suggestRoutePanelEl = document.querySelector('[data-suggest-route-summary]');
+  const suggestRouteListEl = document.querySelector('[data-suggest-route-list]');
+  const autoRefreshToggleButton = document.getElementById('transportMapAutoRefreshToggle');
 
   if (!form) {
     return;
@@ -55,6 +59,7 @@
   let activeId = null;
   let lastFetchSeq = 0;
   let autoRefreshTimer = null;
+  let autoRefreshEnabled = true;
   let hiddenDriverIds = new Set();
   let suggestionById = new Map();
 
@@ -527,6 +532,7 @@
     if (!suggestionLayer || typeof L === 'undefined') {
       return;
     }
+    const showGroupTags = pagePath.indexOf('/transport/map_screen.php') === -1;
     const groups = new Map();
     (items || []).forEach(function (item) {
       const suggestion = suggestionById.get(Number(item.id || 0));
@@ -568,6 +574,9 @@
         dashArray: '6 6',
         interactive: false
       }).addTo(suggestionLayer);
+      if (!showGroupTags) {
+        return;
+      }
       L.marker([centerLat, centerLng], {
         icon: L.divIcon({
           className: 'transportMapSuggestGroupWrap',
@@ -829,6 +838,59 @@
     suggestStatusEl.classList.toggle('is-error', !!isError);
   }
 
+  function renderSuggestionRouteSummary() {
+    if (!suggestRoutePanelEl || !suggestRouteListEl) {
+      return;
+    }
+    const grouped = new Map();
+    suggestionById.forEach(function (suggestion, requestId) {
+      const driverId = Number(suggestion.suggested_driver_id || 0);
+      if (driverId <= 0) {
+        return;
+      }
+      const item = itemById.get(Number(requestId));
+      if (!item) {
+        return;
+      }
+      const key = String(driverId);
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          driver_name: suggestion.suggested_driver_name || ('ドライバー' + driverId),
+          stops: []
+        });
+      }
+      grouped.get(key).stops.push({
+        order: Number(suggestion.suggested_order || 0),
+        name: buildStoreScopedTag(item.store_id, item.shop_tag, item.cast_id) + ' ' + (item.display_name || item.cast_name || '-')
+      });
+    });
+
+    const groups = Array.from(grouped.values()).map(function (group) {
+      group.stops.sort(function (a, b) {
+        return a.order - b.order;
+      });
+      return group;
+    });
+
+    if (!groups.length) {
+      suggestRoutePanelEl.hidden = true;
+      suggestRouteListEl.innerHTML = '';
+      return;
+    }
+
+    suggestRouteListEl.innerHTML = groups.map(function (group) {
+      const stopsHtml = group.stops.map(function (stop) {
+        return '<span class="transportMapSuggestRouteStop"><i>' + escapeHtml(String(stop.order || '-')) + '</i><span>' + escapeHtml(stop.name) + '</span></span>';
+      }).join('');
+      return ''
+        + '<div class="transportMapSuggestRouteCard">'
+        +   '<div class="transportMapSuggestRouteDriver"><b>' + escapeHtml(String(group.stops.length)) + '</b><span>' + escapeHtml(group.driver_name) + '</span></div>'
+        +   '<div class="transportMapSuggestRouteStops">' + stopsHtml + '</div>'
+        + '</div>';
+    }).join('');
+    suggestRoutePanelEl.hidden = false;
+  }
+
   function applySuggestionsToUi(items) {
     suggestionById = new Map();
     (items || []).forEach(function (suggestion) {
@@ -873,6 +935,7 @@
     const nextItems = Array.from(itemById.values());
     renderDriverToggles(nextItems, window.__transportVehicles || []);
     renderMap(window.__transportBase || {}, nextItems, window.__transportVehicles || [], window.__transportBases || []);
+    renderSuggestionRouteSummary();
     setSuggestStatus((items || []).length > 0 ? ((items || []).length + '件の提案を反映しました') : '提案対象はありません', false);
   }
 
@@ -1060,6 +1123,7 @@
       suggestionById = new Map();
       renderList(json.items || []);
       renderDriverToggles(json.items || [], json.vehicles || []);
+      renderSuggestionRouteSummary();
       window.__transportBase = json.base || {};
       window.__transportBases = json.bases || [];
       window.__transportVehicles = json.vehicles || [];
@@ -1096,9 +1160,36 @@
     if (autoRefreshTimer !== null) {
       window.clearTimeout(autoRefreshTimer);
     }
+    if (!autoRefreshEnabled) {
+      autoRefreshTimer = null;
+      return;
+    }
     autoRefreshTimer = window.setTimeout(function () {
       fetchData(false);
     }, autoRefreshMs);
+  }
+
+  function updateAutoRefreshToggleButton() {
+    if (!autoRefreshToggleButton) {
+      return;
+    }
+    autoRefreshToggleButton.textContent = autoRefreshEnabled ? '自動更新ON' : '自動更新OFF';
+    autoRefreshToggleButton.classList.toggle('is-muted', !autoRefreshEnabled);
+  }
+
+  function toggleAutoRefresh() {
+    autoRefreshEnabled = !autoRefreshEnabled;
+    updateAutoRefreshToggleButton();
+    if (autoRefreshEnabled) {
+      setSuggestStatus('自動更新を再開しました', false);
+      scheduleAutoRefresh();
+    } else {
+      if (autoRefreshTimer !== null) {
+        window.clearTimeout(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
+      setSuggestStatus('自動更新を停止しました', false);
+    }
   }
 
   async function saveAssignment(itemId, triggerEl) {
@@ -1151,7 +1242,10 @@
       await fetchData(false);
       focusItem(nextFocusId, true);
     } catch (error) {
-      window.alert(error.message || '送迎割当の保存に失敗しました');
+      const message = String((error && error.message) || '送迎割当の保存に失敗しました');
+      if (message.indexOf('対象店舗が不正です') === -1) {
+        window.alert(message);
+      }
     } finally {
       if (triggerEl) {
         triggerEl.disabled = false;
@@ -1194,6 +1288,25 @@
     } finally {
       if (autoAssignButton) {
         autoAssignButton.disabled = false;
+      }
+    }
+  }
+
+  async function resetSuggestions() {
+    try {
+      if (resetSuggestionsButton) {
+        resetSuggestionsButton.disabled = true;
+      }
+      suggestionById = new Map();
+      setSuggestStatus('提案をリセットしています…', false);
+      await fetchData(false);
+      setSuggestStatus('提案をリセットしました', false);
+    } catch (error) {
+      setSuggestStatus(error.message || 'リセットに失敗しました', true);
+      window.alert(error.message || 'リセットに失敗しました');
+    } finally {
+      if (resetSuggestionsButton) {
+        resetSuggestionsButton.disabled = false;
       }
     }
   }
@@ -1268,9 +1381,12 @@
       }
       await fetchData(false);
       if (savedCount <= 0) {
+        if (skippedStoreCount > 0) {
+          setSuggestStatus('店舗判定できない提案 ' + skippedStoreCount + '件は保留にしました', false);
+          return;
+        }
         throw new Error(
           skippedAddressCount > 0 ? '住所未登録の提案は確定できません'
-            : skippedStoreCount > 0 ? '対象店舗が不正な提案があります'
             : failedCount > 0 ? (failedMessages[0] || '提案確定に失敗しました')
             : '確定できる提案がありません'
         );
@@ -1290,8 +1406,11 @@
         window.alert(summaryParts.join('\n') + '\n' + failedMessages.slice(0, 3).join('\n'));
       }
     } catch (error) {
-      setSuggestStatus(error.message || '提案確定に失敗しました', true);
-      window.alert(error.message || '提案確定に失敗しました');
+      const message = String((error && error.message) || '提案確定に失敗しました');
+      setSuggestStatus(message, true);
+      if (message.indexOf('対象店舗が不正です') === -1) {
+        window.alert(message);
+      }
     } finally {
       if (confirmSuggestionsButton) {
         confirmSuggestionsButton.disabled = false;
@@ -1415,6 +1534,10 @@
     autoAssignButton.addEventListener('click', runAutoAssign);
   }
 
+  if (resetSuggestionsButton) {
+    resetSuggestionsButton.addEventListener('click', resetSuggestions);
+  }
+
   if (confirmSuggestionsButton) {
     confirmSuggestionsButton.addEventListener('click', confirmSuggestions);
   }
@@ -1427,10 +1550,15 @@
   }
 
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible') {
+    if (document.visibilityState === 'visible' && autoRefreshEnabled) {
       fetchData(false);
     }
   });
+
+  if (autoRefreshToggleButton) {
+    autoRefreshToggleButton.addEventListener('click', toggleAutoRefresh);
+    updateAutoRefreshToggleButton();
+  }
 
   updateDriverOptions();
   fetchData(false);
