@@ -59,12 +59,12 @@ $pageConfig = [
 
 render_page_start('送迎マップ TV');
 ?>
-<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327l">
+<link rel="stylesheet" href="/wbss/public/assets/css/transport-map.css?v=20260327n">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="">
 
-<div class="page">
+<div class="page transportMapScreenViewport">
   <div class="admin-wrap transportMapPage transportMapScreenPage">
     <section class="transportMapScreenTopBar">
       <div class="transportMapScreenTopBarMain">
@@ -179,7 +179,7 @@ window.WBSS_TRANSPORT_MAP_CONFIG = <?= json_encode([
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-<script src="/wbss/public/assets/js/transport-map.js?v=20260327l"></script>
+<script src="/wbss/public/assets/js/transport-map.js?v=20260327n"></script>
 <script>
 (function () {
   const toggle = document.getElementById('transportMapScreenMenuToggle');
