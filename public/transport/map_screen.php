@@ -57,6 +57,7 @@ $pageConfig = [
   'storeShortLabels' => transport_map_store_short_labels(),
   'csrfToken' => csrf_token(),
   'focusCastId' => 0,
+  'currentStoreId' => $selectedStoreId,
 ];
 
 render_page_start('送迎マップ TV');
@@ -184,7 +185,7 @@ window.WBSS_TRANSPORT_MAP_CONFIG = <?= json_encode([
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-<script src="/wbss/public/assets/js/transport-map.js?v=20260327z"></script>
+<script src="/wbss/public/assets/js/transport-map.js?v=20260327aa"></script>
 <script>
 (function () {
   const toggle = document.getElementById('transportMapScreenMenuToggle');

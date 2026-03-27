@@ -1210,7 +1210,7 @@
         const statusField = rowEl ? rowEl.querySelector('[data-assign-status]') : null;
         const storeId = resolveSuggestionStoreId(item, suggestion);
         if (storeId <= 0) {
-          throw new Error('対象店舗が不正です');
+          throw new Error('対象店舗が不正です request=' + itemId + ' cast=' + Number(item.cast_id || 0));
         }
         const payload = new URLSearchParams();
         payload.set('action', 'save_assignment');
@@ -1343,6 +1343,17 @@
     const suggestionStoreId = Number(suggestion && suggestion.store_id ? suggestion.store_id : 0);
     if (suggestionStoreId > 0) {
       return suggestionStoreId;
+    }
+    const groupMatch = String((suggestion && suggestion.group_id) || '').match(/^S(\d+)-/);
+    if (groupMatch) {
+      const groupStoreId = Number(groupMatch[1] || 0);
+      if (groupStoreId > 0) {
+        return groupStoreId;
+      }
+    }
+    const currentStoreId = Number(pageConfig.currentStoreId || 0);
+    if (currentStoreId > 0) {
+      return currentStoreId;
     }
     return resolveItemStoreId(item);
   }
