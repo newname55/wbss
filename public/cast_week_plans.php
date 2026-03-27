@@ -402,7 +402,10 @@ $tomorrowBusinessDate = (new DateTime($currentBusinessDate, new DateTimeZone('As
   ->modify('+1 day')
   ->format('Y-m-d');
 $quickDates = [$currentBusinessDate, $tomorrowBusinessDate];
-$viewMode = ((string)($_GET['mode'] ?? '') === 'quick') ? 'quick' : 'week';
+$viewModeRaw = (string)($_GET['mode'] ?? '');
+$viewMode = in_array($viewModeRaw, ['today_quick', 'tomorrow_quick', 'week'], true)
+  ? $viewModeRaw
+  : 'week';
 
 foreach ($quickDates as $quickDate) {
   if (isset($plans[(int)($castRows[0]['id'] ?? 0)][$quickDate]) || $castRows === []) {
@@ -828,25 +831,15 @@ render_header('出勤予定（週）', [
     </div>
 
     <div class="modeSwitch" role="tablist" aria-label="表示モード">
-      <button type="button" class="modeSwitchBtn <?= $viewMode === 'quick' ? 'is-active' : '' ?>" data-mode-switch="quick">今日の特急</button>
+      <button type="button" class="modeSwitchBtn <?= $viewMode === 'today_quick' ? 'is-active' : '' ?>" data-mode-switch="today_quick">今日の特急</button>
+      <button type="button" class="modeSwitchBtn <?= $viewMode === 'tomorrow_quick' ? 'is-active' : '' ?>" data-mode-switch="tomorrow_quick">明日の特急</button>
       <button type="button" class="modeSwitchBtn <?= $viewMode === 'week' ? 'is-active' : '' ?>" data-mode-switch="week">通常の週表示</button>
     </div>
 
-    <section class="card quickModeCard<?= $viewMode === 'quick' ? ' is-active' : '' ?>" id="quickModeSection">
-      <div class="quickDaySwitch" role="tablist" aria-label="特急日付切替">
-        <?php foreach ($quickDates as $index => $quickDate): ?>
-          <button
-            type="button"
-            class="quickDayBtn<?= $index === 0 ? ' is-active' : '' ?>"
-            data-quick-day-switch="<?= h($quickDate) ?>"
-          >
-            <?= $index === 0 ? '今日' : '明日' ?>
-          </button>
-        <?php endforeach; ?>
-      </div>
-
+    <section class="card quickModeCard<?= $viewMode !== 'week' ? ' is-active' : '' ?>" id="quickModeSection">
       <?php foreach ($quickDates as $index => $quickDate): ?>
         <?php
+          $quickModeKey = $index === 0 ? 'today_quick' : 'tomorrow_quick';
           $quickDateOpen = is_store_open_for_week_plan($pdo, $storeRow, $quickDate);
           $quickDateLabel = substr($quickDate, 5) . '（' . jp_dow_label($quickDate) . '）';
           $quickTitle = $index === 0 ? '今日の特急モード' : '明日の特急モード';
@@ -868,8 +861,8 @@ render_header('出勤予定（週）', [
           }
         ?>
         <div
-          class="quickDayPanel<?= $index === 0 ? ' is-active' : '' ?>"
-          data-quick-day-panel="<?= h($quickDate) ?>"
+          class="quickDayPanel<?= $viewMode === $quickModeKey ? ' is-active' : '' ?>"
+          data-quick-day-panel="<?= h($quickModeKey) ?>"
         >
           <div class="quickModeHead">
             <div>
@@ -1393,32 +1386,14 @@ body[data-theme="dark"] .notice{
   display:none;
   gap: 14px;
 }
-.quickDaySwitch{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
-.quickDayBtn{
-  min-height:36px;
-  padding:0 14px;
-  border-radius:999px;
-  border:1px solid var(--line2);
-  background:var(--chip);
-  color:var(--txt);
-  font-weight:1000;
-  cursor:pointer;
-}
-.quickDayBtn.is-active{
-  background: var(--priBg);
-  border-color: color-mix(in srgb, var(--pri) 45%, var(--line2) 55%);
-  color: var(--pri);
-}
 .quickDayPanel{
   display:none;
-  margin-top:14px;
 }
 .quickDayPanel.is-active{
   display:block;
+}
+.quickDayPanel + .quickDayPanel{
+  margin-top:14px;
 }
 .quickModeHead{
   display:flex;
@@ -2146,8 +2121,11 @@ body[data-theme="dark"] .small{ color: var(--mut); }
     document.querySelectorAll('[data-mode-switch]').forEach(btn => {
       btn.classList.toggle('is-active', btn.dataset.modeSwitch === mode);
     });
-    if (quickSection) quickSection.classList.toggle('is-active', mode === 'quick');
+    if (quickSection) quickSection.classList.toggle('is-active', mode !== 'week');
     if (weekSection) weekSection.classList.toggle('is-active', mode === 'week');
+    document.querySelectorAll('[data-quick-day-panel]').forEach(panel => {
+      panel.classList.toggle('is-active', panel.dataset.quickDayPanel === mode);
+    });
   }
 
   function updateDayTotals(){
@@ -2174,15 +2152,6 @@ body[data-theme="dark"] .small{ color: var(--mut); }
     document.querySelectorAll('.js-day-douhan-total').forEach(node => {
       const date = node.dataset.date || '';
       node.textContent = String(douhanTotals[date] || 0);
-    });
-  }
-
-  function setQuickDay(businessDate){
-    document.querySelectorAll('[data-quick-day-switch]').forEach(btn => {
-      btn.classList.toggle('is-active', btn.dataset.quickDaySwitch === businessDate);
-    });
-    document.querySelectorAll('[data-quick-day-panel]').forEach(panel => {
-      panel.classList.toggle('is-active', panel.dataset.quickDayPanel === businessDate);
     });
   }
 
@@ -2283,9 +2252,6 @@ body[data-theme="dark"] .small{ color: var(--mut); }
   document.querySelectorAll('[data-mode-switch]').forEach(btn => {
     btn.addEventListener('click', () => setMode(btn.dataset.modeSwitch || 'week'));
   });
-  document.querySelectorAll('[data-quick-day-switch]').forEach(btn => {
-    btn.addEventListener('click', () => setQuickDay(btn.dataset.quickDaySwitch || ''));
-  });
   document.querySelectorAll('[data-quick-card]').forEach(card => {
     syncQuickCard(card);
     card.querySelectorAll('[data-quick-toggle]').forEach(button => {
@@ -2294,6 +2260,7 @@ body[data-theme="dark"] .small{ color: var(--mut); }
     });
   });
   document.querySelectorAll('[data-quick-day-panel]').forEach(panel => updateQuickCounts(panel));
+  setMode(<?= json_encode($viewMode, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
 })();
 function weekRegularOn(uid){
   const cells = document.querySelectorAll(`.cell[data-uid="${uid}"]`);

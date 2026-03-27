@@ -5,6 +5,7 @@ require_once __DIR__ . '/../app/auth.php';
 require_once __DIR__ . '/../app/db.php';
 require_once __DIR__ . '/../app/layout.php';
 require_once __DIR__ . '/../app/service_messages.php';
+require_once __DIR__ . '/../app/service_quiz.php';
 
 require_login();
 require_role(['cast']);
@@ -75,6 +76,8 @@ $messageSummary = [
   'unread_count' => 0,
   'recent_thanks' => [],
 ];
+$serviceQuizLatest = null;
+$serviceQuizTableReady = service_quiz_results_table_ready($pdo);
 
 if ($storeId > 0) {
   $st = $pdo->prepare("SELECT name, business_day_start FROM stores WHERE id=? LIMIT 1");
@@ -114,6 +117,9 @@ if ($storeId > 0) {
   }
 
   $messageSummary = message_fetch_dashboard_summary($pdo, $storeId, $me, 2);
+  if ($serviceQuizTableReady) {
+    $serviceQuizLatest = service_quiz_fetch_latest_result($pdo, $storeId, $me);
+  }
 }
 /** store.php / layout.php の“店舗表示”を確実に合わせる */
 function sync_store_context(PDO $pdo, int $storeId, string $storeName): void {
@@ -276,7 +282,50 @@ render_header('WBSS', [
       <input type="hidden" id="store_id" value="<?= (int)$storeId ?>">
     </section>
 
+    <a class="card cast-diagnosis" href="/wbss/public/service_quiz.php">
+      <div class="cast-diagnosis__head">
+        <div>
+          <div class="cast-sectionTitle">🪞 接客タイプ診断</div>
+          <div class="cast-sectionSub">12問の4択で、今の接客傾向を4軸から見える化します。</div>
+        </div>
+        <span class="cast-badge <?= $serviceQuizLatest ? 'is-diagnosis' : '' ?>">
+          <?= $serviceQuizLatest ? '最新結果あり' : '未診断' ?>
+        </span>
+      </div>
+
+      <?php if ($serviceQuizLatest): ?>
+        <?php
+          $quizType = (array)($serviceQuizLatest['result_type'] ?? []);
+          $quizScores = (array)($serviceQuizLatest['scores'] ?? []);
+          $quizLabels = (array)($serviceQuizLatest['axis_labels'] ?? []);
+        ?>
+        <div class="cast-diagnosis__body">
+          <div class="cast-diagnosis__main">
+            <div class="cast-diagnosis__type"><?= h((string)($quizType['name'] ?? '診断結果')) ?></div>
+            <div class="cast-diagnosis__summary"><?= h((string)($quizType['summary'] ?? '')) ?></div>
+            <div class="cast-diagnosis__tip">今日の一言: <?= h((string)($quizType['today_tip'] ?? '')) ?></div>
+          </div>
+          <div class="cast-diagnosis__axes">
+            <span>会話 <?= (int)($quizScores['talk_axis'] ?? 0) ?> / <?= h((string)($quizLabels['talk_axis'] ?? '')) ?></span>
+            <span>空気 <?= (int)($quizScores['mood_axis'] ?? 0) ?> / <?= h((string)($quizLabels['mood_axis'] ?? '')) ?></span>
+            <span>反応 <?= (int)($quizScores['response_axis'] ?? 0) ?> / <?= h((string)($quizLabels['response_axis'] ?? '')) ?></span>
+            <span>関係 <?= (int)($quizScores['relation_axis'] ?? 0) ?> / <?= h((string)($quizLabels['relation_axis'] ?? '')) ?></span>
+          </div>
+        </div>
+      <?php else: ?>
+        <div class="cast-diagnosis__empty">
+          まだ診断結果がありません。最初の1回を受けると、最新タイプをここに表示できます。
+        </div>
+      <?php endif; ?>
+    </a>
+
     <div class="card-grid cast-grid">
+      <a class="card big cast-navCard cast-navCard--diagnosis" href="/wbss/public/service_quiz.php">
+        <div class="cast-navCard__icon">🪞</div>
+        <b>接客タイプ診断</b>
+        <span>12問で自分の傾向をチェック</span>
+      </a>
+
       <a class="card big cast-navCard cast-navCard--schedule" href="/wbss/public/cast_week.php">
         <div class="cast-navCard__icon">📅</div>
         <b>出勤予定</b>
@@ -344,7 +393,22 @@ render_header('WBSS', [
 .cast-hero__fortune strong{display:block;font-size:14px;line-height:1.25}
 .cast-hero__fortune small{display:block;margin-top:4px;color:var(--muted);font-size:11px}
 .cast-hero__fortuneIcon{font-size:24px}
-.cast-status,.cast-message-card,.cast-navCard{transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease}
+.cast-status,.cast-message-card,.cast-navCard,.cast-diagnosis{transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease}
+.cast-diagnosis{
+  display:grid;gap:14px;padding:18px;text-decoration:none;color:inherit;
+  background:linear-gradient(180deg, rgba(255,255,255,.86), rgba(255,246,251,.88))
+}
+.cast-diagnosis__head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.cast-diagnosis__body{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(250px,.8fr);gap:14px;align-items:start}
+.cast-diagnosis__type{font-size:24px;font-weight:1000;line-height:1.2}
+.cast-diagnosis__summary{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.75}
+.cast-diagnosis__tip{margin-top:12px;font-size:12px;font-weight:900;color:color-mix(in srgb, var(--txt) 84%, var(--accent))}
+.cast-diagnosis__axes{display:grid;gap:8px}
+.cast-diagnosis__axes span,.cast-diagnosis__empty{
+  display:block;padding:12px 13px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.68);
+  font-size:12px;line-height:1.55
+}
+.cast-diagnosis__empty{color:var(--muted)}
 .cast-sectionTitle{font-size:18px;font-weight:1000;line-height:1.25}
 .cast-sectionSub{margin-top:5px;color:var(--muted);font-size:12px;line-height:1.6}
 .cast-status{padding:18px;background:
@@ -399,6 +463,10 @@ render_header('WBSS', [
   border-color:rgba(255,178,212,.58);
   background:rgba(255,231,241,.88)
 }
+.cast-badge.is-diagnosis{
+  border-color:rgba(255,185,214,.58);
+  background:rgba(255,237,246,.9)
+}
 .card-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .cast-navCard{
   display:grid;align-content:flex-start;gap:10px;padding:18px;min-height:156px;
@@ -423,6 +491,7 @@ render_header('WBSS', [
 }
 .cast-navCard b{font-size:25px;font-size:clamp(19px, 3.6vw, 24px);line-height:1.25}
 .cast-navCard span{color:var(--muted);font-size:12px;line-height:1.5}
+.cast-navCard--diagnosis{border-color:rgba(255,190,212,.56)}
 .cast-navCard--schedule{border-color:rgba(186,209,255,.5)}
 .cast-navCard--customer{border-color:rgba(255,214,165,.5)}
 .cast-navCard--profile{border-color:rgba(185,232,206,.5)}
@@ -466,16 +535,33 @@ body[data-theme="dark"] .cast-status{
   background: linear-gradient(180deg, rgba(39,44,62,.98), rgba(42,47,68,.96));
   border-color: rgba(255,255,255,.12);
 }
+body[data-theme="dark"] .cast-diagnosis{
+  background: linear-gradient(180deg, rgba(40,45,64,.97), rgba(46,52,73,.94));
+  border-color: rgba(255,255,255,.12);
+}
 body[data-theme="dark"] .cast-sectionTitle{ color: #fff6fb; }
 body[data-theme="dark"] .cast-sectionSub,
 body[data-theme="dark"] .cast-status__message,
-body[data-theme="dark"] .cast-status__info{
+body[data-theme="dark"] .cast-status__info,
+body[data-theme="dark"] .cast-diagnosis__summary,
+body[data-theme="dark"] .cast-diagnosis__empty{
   color: rgba(226,220,239,.82);
 }
 body[data-theme="dark"] .cast-status__info span{
   background: rgba(255,255,255,.08);
   border-color: rgba(255,255,255,.10);
   color: rgba(244,239,248,.9);
+}
+body[data-theme="dark"] .cast-diagnosis__type,
+body[data-theme="dark"] .cast-diagnosis__tip,
+body[data-theme="dark"] .cast-diagnosis__axes span{
+  color:#fff7fb;
+}
+body[data-theme="dark"] .cast-diagnosis__axes span,
+body[data-theme="dark"] .cast-diagnosis__empty,
+body[data-theme="dark"] .cast-badge.is-diagnosis{
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.10);
 }
 body[data-theme="dark"] .cast-actionBtn{
   background: rgba(255,255,255,.08);
@@ -585,7 +671,7 @@ body[data-theme="staff"] .cast-hero{background:
   }
 }
 @media (max-width:720px){
-  .cast-hero__top,.cast-status__body{grid-template-columns:1fr}
+  .cast-hero__top,.cast-status__body,.cast-diagnosis__body{grid-template-columns:1fr}
   .cast-hero__fortune{min-width:0;max-width:260px;padding:12px 14px}
   .cast-hero__copy{padding-right:112px}
   .cast-hero__bgMascot{
