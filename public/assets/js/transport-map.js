@@ -45,6 +45,7 @@
   let storeLayer = null;
   let vehicleLayer = null;
   let connectionLayer = null;
+  let suggestionLayer = null;
   let markerById = new Map();
   let rowById = new Map();
   let itemById = new Map();
@@ -79,6 +80,7 @@
     storeLayer = L.layerGroup().addTo(map);
     vehicleLayer = L.layerGroup().addTo(map);
     connectionLayer = L.layerGroup().addTo(map);
+    suggestionLayer = L.layerGroup().addTo(map);
   }
 
   function updateDriverOptions() {
@@ -231,7 +233,7 @@
     const visibleVehicles = filterVehiclesByDriver(vehicles || []);
 
     ensureMap();
-    if (!map || !clusterLayer || !rangeLayer || !storeLayer || !vehicleLayer || !connectionLayer) {
+    if (!map || !clusterLayer || !rangeLayer || !storeLayer || !vehicleLayer || !connectionLayer || !suggestionLayer) {
       if (mapBadgeEl) {
         mapBadgeEl.textContent = '地図初期化失敗';
       }
@@ -243,6 +245,7 @@
     storeLayer.clearLayers();
     vehicleLayer.clearLayers();
     connectionLayer.clearLayers();
+    suggestionLayer.clearLayers();
     markerById = new Map();
 
     const bounds = [];
@@ -297,6 +300,7 @@
     });
 
     renderDriverConnections(visibleItems, visibleVehicles);
+    renderSuggestionGroups(visibleItems);
 
     if (bounds.length) {
       map.fitBounds(bounds, { padding: [36, 36], maxZoom: 13 });
@@ -495,6 +499,65 @@
     });
   }
 
+  function renderSuggestionGroups(items) {
+    if (!suggestionLayer || typeof L === 'undefined') {
+      return;
+    }
+    const groups = new Map();
+    (items || []).forEach(function (item) {
+      const suggestion = suggestionById.get(Number(item.id || 0));
+      if (!suggestion || !suggestion.group_id || !item.has_coords) {
+        return;
+      }
+      const groupId = String(suggestion.group_id);
+      if (!groups.has(groupId)) {
+        groups.set(groupId, []);
+      }
+      groups.get(groupId).push(item);
+    });
+
+    groups.forEach(function (groupItems, groupId) {
+      if (!groupItems.length) {
+        return;
+      }
+      let latTotal = 0;
+      let lngTotal = 0;
+      groupItems.forEach(function (item) {
+        latTotal += Number(item.pickup_lat || 0);
+        lngTotal += Number(item.pickup_lng || 0);
+      });
+      const centerLat = latTotal / groupItems.length;
+      const centerLng = lngTotal / groupItems.length;
+      let radiusM = 180;
+      groupItems.forEach(function (item) {
+        const km = haversineKm(centerLat, centerLng, Number(item.pickup_lat || 0), Number(item.pickup_lng || 0));
+        radiusM = Math.max(radiusM, Math.round(km * 1000) + 120);
+      });
+      const direction = String(groupItems[0].direction_bucket || '未分類');
+      L.circle([centerLat, centerLng], {
+        radius: radiusM,
+        color: '#60a5fa',
+        weight: 1,
+        opacity: 0.65,
+        fillColor: '#bfdbfe',
+        fillOpacity: 0.08,
+        dashArray: '6 6',
+        interactive: false
+      }).addTo(suggestionLayer);
+      L.marker([centerLat, centerLng], {
+        icon: L.divIcon({
+          className: 'transportMapSuggestGroupWrap',
+          html: '<span class="transportMapSuggestGroupTag">'
+            + '<b>' + escapeHtml(groupId) + '</b>'
+            + '<span>' + escapeHtml(direction) + ' ' + escapeHtml(String(groupItems.length)) + '件</span>'
+            + '</span>',
+          iconSize: [110, 30],
+          iconAnchor: [55, 15]
+        })
+      }).addTo(suggestionLayer);
+    });
+  }
+
   function renderDriverToggles(items, vehicles) {
     if (!driverToggleEl) {
       return;
@@ -610,8 +673,8 @@
     const parts = [];
     parts.push('<div class="transportMapSuggestion" title="' + escapeHtml(suggestion.reason || '') + '">');
     parts.push('<span><b>提案</b>' + escapeHtml(suggestion.suggested_driver_name || '候補なし') + '</span>');
-    parts.push('<span><b>グループ</b>' + escapeHtml(suggestion.group_id || '-') + '</span>');
-    parts.push('<span><b>順番</b>' + escapeHtml(suggestion.suggested_order != null ? String(suggestion.suggested_order) : '-') + '</span>');
+    parts.push('<span><b>組</b>' + escapeHtml(suggestion.group_id || '-') + '</span>');
+    parts.push('<span><b>順</b>' + escapeHtml(suggestion.suggested_order != null ? String(suggestion.suggested_order) : '-') + '</span>');
     parts.push('<span><b>理由</b>' + escapeHtml(suggestion.reason || '-') + '</span>');
     parts.push('</div>');
     return parts.join('');
@@ -1003,6 +1066,17 @@
       return parts[1].slice(0, 5);
     }
     return text.slice(-5);
+  }
+
+  function haversineKm(lat1, lng1, lat2, lng2) {
+    const earthRadiusKm = 6371.0;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+      + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+      * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadiusKm * c;
   }
 
   function buildStoreScopedTag(storeId, shopTag, castId) {

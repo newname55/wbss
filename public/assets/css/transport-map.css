@@ -736,6 +736,45 @@
   font-size:10px;
 }
 
+.transportMapSuggestGroupWrap{
+  background:transparent;
+  border:none;
+}
+
+.transportMapSuggestGroupTag{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 8px;
+  border-radius:999px;
+  background:rgba(239,246,255,.92);
+  border:1px solid rgba(96,165,250,.28);
+  box-shadow:0 4px 12px rgba(37,99,235,.12);
+  color:#1d4ed8;
+  font-size:10px;
+  font-weight:700;
+  white-space:nowrap;
+}
+
+.transportMapSuggestGroupTag b{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:22px;
+  min-height:18px;
+  padding:0 6px;
+  border-radius:999px;
+  background:#2563eb;
+  color:#eff6ff;
+  font-size:10px;
+  line-height:1;
+}
+
+.transportMapSuggestGroupTag span{
+  color:#475569;
+  font-weight:800;
+}
+
 .transportMapInlineSelect{
   min-height:38px;
   width:100%;
