@@ -1213,6 +1213,9 @@
     try {
       let savedCount = 0;
       let skippedAddressCount = 0;
+      let skippedStoreCount = 0;
+      let failedCount = 0;
+      const failedMessages = [];
       for (const suggestion of suggestions) {
         const itemId = Number(suggestion.request_id || 0);
         const item = itemById.get(itemId);
@@ -1228,43 +1231,64 @@
         const statusField = rowEl ? rowEl.querySelector('[data-assign-status]') : null;
         const storeId = resolveSuggestionStoreId(item, suggestion);
         if (storeId <= 0) {
-          throw new Error('対象店舗が不正です request=' + itemId + ' cast=' + Number(item.cast_id || 0));
+          skippedStoreCount += 1;
+          failedMessages.push('cast=' + Number(item.cast_id || 0) + ' は店舗特定不可');
+          continue;
         }
-        const payload = new URLSearchParams();
-        payload.set('action', 'save_assignment');
-        payload.set('csrf_token', String(pageConfig.csrfToken || ''));
-        payload.set('store_id', String(storeId));
-        payload.set('business_date', String(item.business_date || ''));
-        payload.set('cast_id', String(item.cast_id || '0'));
-        payload.set('driver_user_id', driverField ? String(driverField.value || '0') : String(suggestion.suggested_driver_id || 0));
-        payload.set('status', statusField ? String(statusField.value || 'assigned') : 'assigned');
-        payload.set('sort_order', suggestion.suggested_order != null ? String(suggestion.suggested_order) : '');
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          cache: 'no-store',
-          credentials: 'same-origin',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-          },
-          body: payload.toString()
-        });
-        const json = await response.json().catch(function () { return {}; });
-        if (!response.ok || !json.ok) {
-          throw new Error(json.error || '提案確定に失敗しました');
+        try {
+          const payload = new URLSearchParams();
+          payload.set('action', 'save_assignment');
+          payload.set('csrf_token', String(pageConfig.csrfToken || ''));
+          payload.set('store_id', String(storeId));
+          payload.set('business_date', String(item.business_date || ''));
+          payload.set('cast_id', String(item.cast_id || '0'));
+          payload.set('driver_user_id', driverField ? String(driverField.value || '0') : String(suggestion.suggested_driver_id || 0));
+          payload.set('status', statusField ? String(statusField.value || 'assigned') : 'assigned');
+          payload.set('sort_order', suggestion.suggested_order != null ? String(suggestion.suggested_order) : '');
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            cache: 'no-store',
+            credentials: 'same-origin',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+            },
+            body: payload.toString()
+          });
+          const json = await response.json().catch(function () { return {}; });
+          if (!response.ok || !json.ok) {
+            throw new Error(json.error || '提案確定に失敗しました');
+          }
+          savedCount += 1;
+        } catch (innerError) {
+          failedCount += 1;
+          failedMessages.push('cast=' + Number(item.cast_id || 0) + ' ' + (innerError.message || '保存失敗'));
+          continue;
         }
-        savedCount += 1;
       }
       await fetchData(false);
       if (savedCount <= 0) {
-        throw new Error(skippedAddressCount > 0 ? '住所未登録の提案は確定できません' : '確定できる提案がありません');
+        throw new Error(
+          skippedAddressCount > 0 ? '住所未登録の提案は確定できません'
+            : skippedStoreCount > 0 ? '対象店舗が不正な提案があります'
+            : failedCount > 0 ? (failedMessages[0] || '提案確定に失敗しました')
+            : '確定できる提案がありません'
+        );
       }
-      setSuggestStatus(
-        skippedAddressCount > 0
-          ? (savedCount + '件を確定、住所未登録 ' + skippedAddressCount + '件はスキップしました')
-          : (savedCount + '件を確定しました'),
-        false
-      );
+      const summaryParts = [savedCount + '件を確定しました'];
+      if (skippedAddressCount > 0) {
+        summaryParts.push('住所未登録 ' + skippedAddressCount + '件スキップ');
+      }
+      if (skippedStoreCount > 0) {
+        summaryParts.push('店舗不正 ' + skippedStoreCount + '件スキップ');
+      }
+      if (failedCount > 0) {
+        summaryParts.push('保存失敗 ' + failedCount + '件');
+      }
+      setSuggestStatus(summaryParts.join(' / '), failedCount > 0);
+      if (failedCount > 0) {
+        window.alert(summaryParts.join('\n') + '\n' + failedMessages.slice(0, 3).join('\n'));
+      }
     } catch (error) {
       setSuggestStatus(error.message || '提案確定に失敗しました', true);
       window.alert(error.message || '提案確定に失敗しました');
