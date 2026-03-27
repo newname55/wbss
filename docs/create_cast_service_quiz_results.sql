@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS cast_service_quiz_results (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  store_id BIGINT UNSIGNED NOT NULL,
+  cast_id BIGINT UNSIGNED NOT NULL,
+  quiz_version VARCHAR(30) NOT NULL DEFAULT 'v0.1',
+  result_type_key VARCHAR(50) NOT NULL,
+  result_type_name VARCHAR(100) NOT NULL,
+  talk_axis_score SMALLINT NOT NULL DEFAULT 0,
+  mood_axis_score SMALLINT NOT NULL DEFAULT 0,
+  response_axis_score SMALLINT NOT NULL DEFAULT 0,
+  relation_axis_score SMALLINT NOT NULL DEFAULT 0,
+  answers_json JSON NOT NULL,
+  scores_json JSON NOT NULL,
+  result_json JSON NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_cast_service_quiz_results_cast_latest (store_id, cast_id, created_at),
+  KEY idx_cast_service_quiz_results_type (store_id, result_type_key, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
