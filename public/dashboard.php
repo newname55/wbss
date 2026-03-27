@@ -1722,6 +1722,10 @@ render_page_start('ダッシュボード');
   gap:10px;
 }
 
+.dash-section-staff .dash-grid{
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+}
+
 .dash-card{
   display:block;
   padding:13px 13px 12px;
@@ -1811,9 +1815,6 @@ render_page_start('ダッシュボード');
     grid-template-columns:repeat(5, minmax(0, 1fr));
   }
 
-  .dash-section-staff .dash-grid{
-    grid-template-columns:repeat(5, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 820px){
@@ -2023,6 +2024,10 @@ render_page_start('ダッシュボード');
   }
 
   .dash-grid{
+    grid-template-columns:1fr;
+  }
+
+  .dash-section-staff .dash-grid{
     grid-template-columns:1fr;
   }
 
