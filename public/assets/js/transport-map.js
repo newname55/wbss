@@ -1387,7 +1387,7 @@
         }
         throw new Error(
           skippedAddressCount > 0 ? '住所未登録の提案は確定できません'
-            : failedCount > 0 ? (failedMessages[0] || '提案確定に失敗しました')
+            : failedCount > 0 ? ('保存できない提案 ' + failedCount + '件がありました')
             : '確定できる提案がありません'
         );
       }
