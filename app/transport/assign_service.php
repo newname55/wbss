@@ -216,9 +216,24 @@ function transport_assign_service_pick_driver(array $cluster, array $drivers, ar
     if ($score > $bestScore) {
       $bestScore = $score;
       $best = $driver;
-      $bestReason = '方面一致:' . ($sameDirection ? '有' : '無')
-        . ' / 近距離:' . transport_map_round_distance($baseDistance)
-        . 'km / 担当件数:' . $load . '件';
+      $reasonParts = [];
+      if ($sameDirection) {
+        $reasonParts[] = '同方面';
+      }
+      if ($sameCluster > 0) {
+        $reasonParts[] = '近場まとまり';
+      }
+      if ($baseDistance <= 4.0) {
+        $reasonParts[] = '店から近い';
+      }
+      if ($load <= 1) {
+        $reasonParts[] = '担当少なめ';
+      }
+      if ($reasonParts === []) {
+        $reasonParts[] = '負荷バランス';
+      }
+      $reasonParts[] = '担当' . $load . '件';
+      $bestReason = implode(' / ', $reasonParts);
     }
   }
 
