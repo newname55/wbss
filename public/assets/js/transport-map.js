@@ -22,6 +22,7 @@
   const driverToggleEl = document.querySelector('[data-driver-toggles]');
   const vehicleUpdatedEl = document.querySelector('[data-vehicle-updated]');
   const autoAssignButton = document.getElementById('transportMapAutoAssign');
+  const rerouteSuggestionsButton = document.getElementById('transportMapRerouteSuggestions');
   const confirmSuggestionsButton = document.getElementById('transportMapConfirmSuggestions');
   const suggestStatusEl = document.getElementById('transportMapSuggestStatus');
 
@@ -1198,6 +1199,32 @@
     }
   }
 
+  async function rerouteSuggestions() {
+    const suggestions = Array.from(suggestionById.values()).filter(function (suggestion) {
+      return Number(suggestion.suggested_driver_id || 0) > 0;
+    });
+    if (!suggestions.length) {
+      setSuggestStatus('組み直せる提案がありません', true);
+      return;
+    }
+    try {
+      if (rerouteSuggestionsButton) {
+        rerouteSuggestionsButton.disabled = true;
+      }
+      setSuggestStatus('順番を組み直しています…', false);
+      await optimizeSuggestionRoutes(suggestions);
+      applySuggestionsToUi(Array.from(suggestionById.values()));
+      setSuggestStatus('順番を組み直しました', false);
+    } catch (error) {
+      setSuggestStatus(error.message || '順番の組み直しに失敗しました', true);
+      window.alert(error.message || '順番の組み直しに失敗しました');
+    } finally {
+      if (rerouteSuggestionsButton) {
+        rerouteSuggestionsButton.disabled = false;
+      }
+    }
+  }
+
   async function confirmSuggestions() {
     const suggestions = Array.from(suggestionById.values()).filter(function (suggestion) {
       return Number(suggestion.suggested_driver_id || 0) > 0;
@@ -1413,6 +1440,10 @@
 
   if (autoAssignButton) {
     autoAssignButton.addEventListener('click', runAutoAssign);
+  }
+
+  if (rerouteSuggestionsButton) {
+    rerouteSuggestionsButton.addEventListener('click', rerouteSuggestions);
   }
 
   if (confirmSuggestionsButton) {
