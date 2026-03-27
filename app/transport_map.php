@@ -436,6 +436,67 @@ function transport_map_fetch_assignment_by_cast(PDO $pdo, int $storeId, string $
   return $row ?: null;
 }
 
+function transport_map_resolve_save_store_id(PDO $pdo, array $source): int {
+  $requestedStoreId = (int)($source['store_id'] ?? 0);
+  if ($requestedStoreId > 0) {
+    return transport_resolve_store_id($pdo, $requestedStoreId);
+  }
+
+  $castId = (int)($source['cast_id'] ?? 0);
+  $businessDate = trim((string)($source['business_date'] ?? ''));
+  if ($castId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $businessDate)) {
+    throw new RuntimeException('対象店舗が不正です');
+  }
+
+  $stores = transport_allowed_stores($pdo);
+  $allowedStoreIds = [];
+  foreach ($stores as $store) {
+    $sid = (int)($store['id'] ?? 0);
+    if ($sid > 0) {
+      $allowedStoreIds[] = $sid;
+    }
+  }
+  if ($allowedStoreIds === []) {
+    throw new RuntimeException('対象店舗が不正です');
+  }
+
+  if (transport_map_table_exists($pdo, 'transport_assignments')) {
+    $ph = implode(',', array_fill(0, count($allowedStoreIds), '?'));
+    $st = $pdo->prepare("
+      SELECT store_id
+      FROM transport_assignments
+      WHERE business_date = ?
+        AND cast_id = ?
+        AND store_id IN ({$ph})
+      ORDER BY updated_at DESC, id DESC
+      LIMIT 2
+    ");
+    $st->execute(array_merge([$businessDate, $castId], $allowedStoreIds));
+    $matchedStoreIds = array_values(array_unique(array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN) ?: [])));
+    if (count($matchedStoreIds) === 1 && $matchedStoreIds[0] > 0) {
+      return $matchedStoreIds[0];
+    }
+  }
+
+  $candidates = transport_map_fetch_required_candidates_for_stores($pdo, $allowedStoreIds, $businessDate);
+  $matchedStoreIds = [];
+  foreach ($candidates as $candidate) {
+    if ((int)($candidate['cast_id'] ?? 0) !== $castId) {
+      continue;
+    }
+    $candidateStoreId = (int)($candidate['store_id'] ?? 0);
+    if ($candidateStoreId > 0) {
+      $matchedStoreIds[] = $candidateStoreId;
+    }
+  }
+  $matchedStoreIds = array_values(array_unique($matchedStoreIds));
+  if (count($matchedStoreIds) === 1 && $matchedStoreIds[0] > 0) {
+    return $matchedStoreIds[0];
+  }
+
+  throw new RuntimeException('対象店舗が不正です');
+}
+
 function transport_map_resolve_assignment_status(?string $requestedStatus, ?int $driverUserId, string $fallbackStatus): string {
   $status = transport_map_normalize_status($requestedStatus);
   if ($status === '') {
@@ -498,7 +559,7 @@ function transport_map_save_assignment(PDO $pdo, array $source, int $actorUserId
     'sort_order' => $source['sort_order'] ?? null,
   ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
-  $storeId = transport_resolve_store_id($pdo, (int)($source['store_id'] ?? 0));
+  $storeId = transport_map_resolve_save_store_id($pdo, $source);
   $storeRow = transport_map_fetch_store_row($pdo, $storeId);
   $businessDate = transport_map_normalize_date((string)($source['business_date'] ?? ''), transport_map_default_business_date($storeRow));
   $castId = (int)($source['cast_id'] ?? 0);
