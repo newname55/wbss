@@ -821,6 +821,9 @@
       if (!suggestion) {
         return;
       }
+      if (Number(item.store_id || 0) <= 0 && Number(suggestion.store_id || 0) > 0) {
+        item.store_id = Number(suggestion.store_id || 0);
+      }
       item.driver_user_id = suggestion.suggested_driver_id || item.driver_user_id;
       item.driver_name = suggestion.suggested_driver_name || item.driver_name;
       if (item.status === 'pending' && suggestion.suggested_driver_id) {
@@ -1205,7 +1208,7 @@
         const rowEl = rowById.get(itemId);
         const driverField = rowEl ? rowEl.querySelector('[data-assign-driver]') : null;
         const statusField = rowEl ? rowEl.querySelector('[data-assign-status]') : null;
-        const storeId = resolveItemStoreId(item);
+        const storeId = resolveSuggestionStoreId(item, suggestion);
         if (storeId <= 0) {
           throw new Error('対象店舗が不正です');
         }
@@ -1334,6 +1337,14 @@
       }
     }
     return 0;
+  }
+
+  function resolveSuggestionStoreId(item, suggestion) {
+    const suggestionStoreId = Number(suggestion && suggestion.store_id ? suggestion.store_id : 0);
+    if (suggestionStoreId > 0) {
+      return suggestionStoreId;
+    }
+    return resolveItemStoreId(item);
   }
 
   form.addEventListener('submit', function (event) {
