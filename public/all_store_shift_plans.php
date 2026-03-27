@@ -809,11 +809,11 @@ body[data-theme="cast"] .date-nav .date-btn.is-active{
                   <div class="mono"><?= h((string)($row['start_hm'] ?? '—')) ?></div>
                 </div>
                 <div class="plan-card__item">
-                  <div class="plan-card__label">ステータス</div>
+                  <div class="plan-card__label">状態</div>
                   <div><span class="status-badge <?= h((string)($row['state']['class'] ?? 'muted')) ?>"><?= h((string)($row['state']['label'] ?? '予定のみ')) ?></span></div>
                 </div>
                 <div class="plan-card__item">
-                  <div class="plan-card__label">来店手段</div>
+                  <div class="plan-card__label">出勤来店手段</div>
                   <div><?= h((string)($row['transport_text'] ?? '未設定')) ?></div>
                 </div>
                 <div class="plan-card__item">
