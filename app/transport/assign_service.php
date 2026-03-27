@@ -9,57 +9,54 @@ require_once __DIR__ . '/../service_transport.php';
 require_once __DIR__ . '/route_optimizer.php';
 
 function transport_assign_service_target_rows(PDO $pdo, array $filters): array {
-  if (!transport_map_table_exists($pdo, 'transport_assignments')) {
-    return [];
+  $data = transport_map_fetch_data($pdo, [
+    'store_id' => (int)($filters['store_id'] ?? 0),
+    'store_scope' => (string)($filters['store_scope'] ?? 'single'),
+    'store_ids' => (array)($filters['store_ids'] ?? []),
+    'business_date' => (string)($filters['business_date'] ?? ''),
+    'status' => '',
+    'driver_user_id' => 0,
+    'direction_bucket' => '',
+    'unassigned_only' => 0,
+    'time_from' => '',
+    'time_to' => '',
+  ]);
+
+  $rows = [];
+  foreach ((array)($data['items'] ?? []) as $item) {
+    if ((string)($item['status'] ?? '') !== 'pending') {
+      continue;
+    }
+    if (($item['driver_user_id'] ?? null) !== null) {
+      continue;
+    }
+    if (empty($item['has_coords'])) {
+      continue;
+    }
+    $rows[] = [
+      'id' => (int)($item['id'] ?? 0),
+      'store_id' => (int)($item['store_id'] ?? 0),
+      'business_date' => (string)($item['business_date'] ?? ''),
+      'cast_id' => (int)($item['cast_id'] ?? 0),
+      'pickup_name' => (string)($item['display_name'] ?? ''),
+      'pickup_lat' => ($item['pickup_lat'] ?? null) !== null ? (float)$item['pickup_lat'] : null,
+      'pickup_lng' => ($item['pickup_lng'] ?? null) !== null ? (float)$item['pickup_lng'] : null,
+      'direction_bucket' => (string)($item['direction_bucket'] ?? ''),
+      'area_name' => (string)($item['area_name'] ?? ''),
+      'sort_order' => (int)($item['sort_order'] ?? 0),
+      'cast_name' => (string)($item['cast_name'] ?? ''),
+      'source_type' => (string)($item['source_type'] ?? 'assignment'),
+    ];
   }
 
-  $storeIds = array_values(array_filter(array_map('intval', (array)($filters['store_ids'] ?? [])), static fn(int $id): bool => $id > 0));
-  if ($storeIds === []) {
-    return [];
-  }
+  usort($rows, static function (array $a, array $b): int {
+    if ((int)$a['store_id'] !== (int)$b['store_id']) {
+      return ((int)$a['store_id'] <=> (int)$b['store_id']);
+    }
+    return ((int)$a['id'] <=> (int)$b['id']);
+  });
 
-  $params = [
-    ':business_date' => (string)$filters['business_date'],
-  ];
-  $where = [
-    "ta.business_date = :business_date",
-    "ta.status = 'pending'",
-    "ta.driver_user_id IS NULL",
-    "ta.pickup_lat IS NOT NULL",
-    "ta.pickup_lng IS NOT NULL",
-  ];
-
-  $ph = [];
-  foreach ($storeIds as $index => $storeId) {
-    $key = ':store_id_' . $index;
-    $ph[] = $key;
-    $params[$key] = $storeId;
-  }
-  $where[] = 'ta.store_id IN (' . implode(', ', $ph) . ')';
-
-  $sql = "
-    SELECT
-      ta.id,
-      ta.store_id,
-      ta.business_date,
-      ta.cast_id,
-      ta.pickup_name,
-      ta.pickup_lat,
-      ta.pickup_lng,
-      ta.direction_bucket,
-      ta.area_name,
-      ta.sort_order,
-      COALESCE(NULLIF(TRIM(cu.display_name), ''), NULLIF(TRIM(cu.login_id), ''), CONCAT('cast#', ta.cast_id)) AS cast_name
-    FROM transport_assignments ta
-    LEFT JOIN users cu
-      ON cu.id = ta.cast_id
-    WHERE " . implode(' AND ', $where) . "
-    ORDER BY ta.store_id ASC, ta.pickup_time_from ASC, ta.id ASC
-  ";
-
-  $st = $pdo->prepare($sql);
-  $st->execute($params);
-  return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  return $rows;
 }
 
 function transport_assign_service_driver_loads(PDO $pdo, int $storeId, string $businessDate): array {
