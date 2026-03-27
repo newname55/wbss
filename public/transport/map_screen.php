@@ -122,7 +122,7 @@ render_page_start('送迎マップ TV');
 
         <div class="transportMapScreenActions">
           <button type="button" class="btn" id="transportMapAutoAssign">自動提案</button>
-          <button type="button" class="btn" id="transportMapRerouteSuggestions">順番再計算</button>
+          <button type="button" class="btn" id="transportMapResetSuggestions">リセット</button>
           <button type="button" class="btn btn-primary" id="transportMapConfirmSuggestions">提案を確定</button>
           <button type="submit" class="btn">条件反映</button>
           <button type="button" class="btn btn-primary" id="transportMapReload">再読込</button>
@@ -186,7 +186,7 @@ window.WBSS_TRANSPORT_MAP_CONFIG = <?= json_encode([
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-<script src="/wbss/public/assets/js/transport-map.js?v=20260327ae"></script>
+<script src="/wbss/public/assets/js/transport-map.js?v=20260327af"></script>
 <script>
 (function () {
   const toggle = document.getElementById('transportMapScreenMenuToggle');
