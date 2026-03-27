@@ -354,7 +354,8 @@
     const status = String(item.status || '');
     const isUnassigned = item.driver_user_id === null;
     const color = (statusOptions[status] && statusOptions[status].color) || '#475569';
-    const className = isUnassigned ? ' transportMapMarkerIcon--unassigned' : '';
+    const storeClass = ' transportMapMarkerIcon--store-' + String(item.store_id || '0');
+    const className = (isUnassigned ? ' transportMapMarkerIcon--unassigned' : '') + storeClass;
     const shopTag = buildStoreScopedTag(item.store_id, item.shop_tag, item.cast_id);
     const nameText = String(item.display_name || item.cast_name || '-');
     const labelHtml = ''
@@ -382,7 +383,7 @@
   }
 
   function buildVehicleIcon(vehicle) {
-    const className = vehicle.is_stale ? ' transportMapVehicleIcon--stale' : '';
+    const className = (vehicle.is_stale ? ' transportMapVehicleIcon--stale' : '') + ' transportMapVehicleIcon--store-' + String(vehicle.store_id || '0');
     const label = (vehicle.vehicle_label || '車両') + ' ' + (vehicle.driver_name || '');
     const timeLabel = formatDateTimeShort(vehicle.recorded_at);
     const storeLabel = storeShortLabels[String(vehicle.store_id || '')] || '';

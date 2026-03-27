@@ -8,6 +8,8 @@
   display:grid;
   gap:10px;
   padding-bottom:16px;
+  max-width:1280px;
+  margin:0 auto;
 }
 
 .transportMapScreenTopBar{
@@ -57,44 +59,20 @@
 }
 
 .transportMapScreenTop{
-  position:fixed;
-  top:62px;
-  right:18px;
-  z-index:40;
-  width:min(360px, calc(100vw - 36px));
+  width:100%;
   padding:8px 10px;
   display:grid;
   gap:8px;
   border-radius:12px;
   background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(248,250,252,.88));
-  box-shadow:0 18px 40px rgba(15,18,34,.14);
-  backdrop-filter:blur(12px);
+  box-shadow:0 8px 22px rgba(15,18,34,.08);
 }
 
 .transportMapScreenForm{
   display:grid;
-  grid-template-columns:1fr;
+  grid-template-columns:minmax(160px, 220px) minmax(160px, 200px) auto;
   gap:8px;
-  align-items:stretch;
-}
-
-.transportMapScreenHero{
-  display:grid;
-  gap:6px;
-  min-width:0;
-}
-
-.transportMapScreenTitle{
-  font-size:17px;
-  font-weight:1000;
-  color:#0f172a;
-  line-height:1.1;
-}
-
-.transportMapScreenMeta{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
+  align-items:end;
 }
 
 .transportMapScreenActions{
@@ -116,10 +94,7 @@
   align-items:flex-start;
   gap:6px;
   flex-wrap:wrap;
-  padding:6px 8px;
-  border-radius:10px;
-  background:rgba(255,255,255,.5);
-  box-shadow:none;
+  padding:0;
 }
 
 .transportMapScreenMetric{
@@ -164,6 +139,20 @@
 
 .transportMapCanvas--screen{
   min-height:calc(100vh - 84px);
+}
+
+.transportMapScreenFooter{
+  padding:8px 10px;
+  display:grid;
+  gap:8px;
+  border-radius:12px;
+}
+
+.transportMapScreenFooterRow{
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) auto;
+  gap:10px;
+  align-items:center;
 }
 
 .transportMapDriverVisibility--screen{
@@ -220,11 +209,6 @@
   font-size:12px;
 }
 
-.transportMapScreenPage .heroChip{
-  padding:5px 8px;
-  font-size:11px;
-}
-
 .transportMapScreenPage .transportMapDriverVisibility--screen{
   padding:6px 8px;
   border-radius:10px;
@@ -252,6 +236,63 @@
 .transportMapScreenPage .transportMapCanvasHead .transportMapMapBadge{
   pointer-events:auto;
 }
+
+.transportMapMarkerIcon--store-1{
+  border-color:rgba(234,179,8,.42);
+  background:linear-gradient(180deg, rgba(255,251,235,.96), rgba(255,255,255,.98));
+}
+
+.transportMapMarkerIcon--store-1 .transportMapMarkerTag{
+  background:#eab308;
+  color:#111827;
+}
+
+.transportMapMarkerIcon--store-2{
+  border-color:rgba(59,130,246,.42);
+  background:linear-gradient(180deg, rgba(239,246,255,.96), rgba(255,255,255,.98));
+}
+
+.transportMapMarkerIcon--store-2 .transportMapMarkerTag{
+  background:#2563eb;
+  border-radius:8px;
+}
+
+.transportMapMarkerIcon--store-3{
+  border-color:rgba(139,92,246,.42);
+  background:linear-gradient(180deg, rgba(245,243,255,.96), rgba(255,255,255,.98));
+}
+
+.transportMapMarkerIcon--store-3 .transportMapMarkerTag{
+  background:#7c3aed;
+  clip-path:polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0 50%);
+  border-radius:0;
+}
+
+.transportMapMarkerIcon--store-4{
+  border-color:rgba(16,185,129,.42);
+  background:linear-gradient(180deg, rgba(236,253,245,.96), rgba(255,255,255,.98));
+}
+
+.transportMapMarkerIcon--store-4 .transportMapMarkerTag{
+  background:#10b981;
+  border-radius:6px 999px 999px 6px;
+}
+
+.transportMapMarkerIcon--store-5{
+  border-color:rgba(244,63,94,.42);
+  background:linear-gradient(180deg, rgba(255,241,242,.96), rgba(255,255,255,.98));
+}
+
+.transportMapMarkerIcon--store-5 .transportMapMarkerTag{
+  background:#f43f5e;
+  border-radius:999px 6px 999px 6px;
+}
+
+.transportMapVehicleIcon--store-1 .transportMapVehicleBadge{ background:#eab308; color:#111827; }
+.transportMapVehicleIcon--store-2 .transportMapVehicleBadge{ background:#2563eb; color:#f8fafc; }
+.transportMapVehicleIcon--store-3 .transportMapVehicleBadge{ background:#7c3aed; color:#f8fafc; }
+.transportMapVehicleIcon--store-4 .transportMapVehicleBadge{ background:#10b981; color:#052e16; }
+.transportMapVehicleIcon--store-5 .transportMapVehicleBadge{ background:#f43f5e; color:#fff1f2; }
 
 .transportPanel{
   border:1px solid rgba(15,23,42,.08);
@@ -1213,9 +1254,8 @@ body[data-theme="staff"] .transportMapDriverToggle{
     align-items:flex-start;
   }
 
-  .transportMapScreenTop{
-    right:12px;
-    width:min(360px, calc(100vw - 24px));
+  .transportMapScreenFooterRow{
+    grid-template-columns:1fr;
   }
 }
 
@@ -1290,13 +1330,5 @@ body[data-theme="staff"] .transportMapDriverToggle{
 
   .transportMapCanvas--screen{
     min-height:56vh;
-  }
-
-  .transportMapScreenTop{
-    top:52px;
-    right:10px;
-    width:min(360px, calc(100vw - 20px));
-    max-height:70vh;
-    overflow:auto;
   }
 }
