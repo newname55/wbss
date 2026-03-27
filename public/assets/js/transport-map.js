@@ -1399,9 +1399,9 @@
         summaryParts.push('店舗不正 ' + skippedStoreCount + '件スキップ');
       }
       if (failedCount > 0) {
-        summaryParts.push('保存失敗 ' + failedCount + '件');
+        summaryParts.push('一部保留 ' + failedCount + '件');
       }
-      setSuggestStatus(summaryParts.join(' / '), failedCount > 0);
+      setSuggestStatus(summaryParts.join(' / '), false);
       if (failedCount > 0 && savedCount <= 0) {
         window.alert(summaryParts.join('\n') + '\n' + failedMessages.slice(0, 3).join('\n'));
       }
