@@ -398,11 +398,17 @@ foreach ($castRows as $castRow) {
 $currentBusinessDate = function_exists('business_date_for_store')
   ? business_date_for_store($storeRow, null)
   : ymd(jst_now());
-$isQuickBusinessDateOpen = is_store_open_for_week_plan($pdo, $storeRow, $currentBusinessDate);
-$quickDateLabel = substr($currentBusinessDate, 5) . '（' . jp_dow_label($currentBusinessDate) . '）';
+$tomorrowBusinessDate = (new DateTime($currentBusinessDate, new DateTimeZone('Asia/Tokyo')))
+  ->modify('+1 day')
+  ->format('Y-m-d');
+$quickDates = [$currentBusinessDate, $tomorrowBusinessDate];
 $viewMode = ((string)($_GET['mode'] ?? '') === 'quick') ? 'quick' : 'week';
 
-if (!isset($plans[(int)($castRows[0]['id'] ?? 0)][$currentBusinessDate]) && $castRows !== []) {
+foreach ($quickDates as $quickDate) {
+  if (isset($plans[(int)($castRows[0]['id'] ?? 0)][$quickDate]) || $castRows === []) {
+    continue;
+  }
+
   $st = $pdo->prepare("
     SELECT user_id, business_date, start_time, is_off, note
     FROM cast_shift_plans
@@ -410,7 +416,7 @@ if (!isset($plans[(int)($castRows[0]['id'] ?? 0)][$currentBusinessDate]) && $cas
       AND business_date=?
       AND status='planned'
   ");
-  $st->execute([$storeId, $currentBusinessDate]);
+  $st->execute([$storeId, $quickDate]);
   foreach (($st->fetchAll(PDO::FETCH_ASSOC) ?: []) as $r) {
     $uid = (int)$r['user_id'];
     $d = (string)$r['business_date'];
@@ -474,6 +480,14 @@ function transport_needed_state(array $castRow): bool {
   return $pickupEnabled === 1 && $pickupTarget !== 'self';
 }
 
+function plan_is_working(array $plan): bool {
+  return trim((string)($plan['start'] ?? '')) !== '';
+}
+
+function quick_transport_active(array $castRow, array $plan): bool {
+  return plan_is_working($plan) && transport_needed_state($castRow);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ((string)($_POST['action'] ?? '') === 'toggle_today_quick') {
     if (function_exists('csrf_verify')) {
@@ -488,16 +502,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($castOnly && $targetUserId !== $userId) {
       json_response(['ok' => false, 'error' => '自分以外は変更できません'], 403);
     }
-    if (!$isQuickBusinessDateOpen) {
-      json_response(['ok' => false, 'error' => '本日は店休日のため特急モードは使えません'], 400);
+    $targetBusinessDate = normalize_date((string)($_POST['target_business_date'] ?? ''), $currentBusinessDate);
+    $isTargetBusinessDateOpen = is_store_open_for_week_plan($pdo, $storeRow, $targetBusinessDate);
+    if (!$isTargetBusinessDateOpen) {
+      json_response(['ok' => false, 'error' => '対象日は店休日のため特急モードは使えません'], 400);
     }
 
     $castRow = $castRowMap[$targetUserId];
 
     try {
       if ($toggleKind === 'shift') {
-        $currentPlan = $plans[$targetUserId][$currentBusinessDate] ?? ['start'=>'','end'=>'LAST','douhan'=>false];
-        $isCurrentlyWorking = trim((string)($currentPlan['start'] ?? '')) !== '';
+        $currentPlan = $plans[$targetUserId][$targetBusinessDate] ?? ['start'=>'','end'=>'LAST','douhan'=>false];
+        $isCurrentlyWorking = plan_is_working($currentPlan);
         $nextWorking = !$isCurrentlyWorking;
         $defaultStart = trim((string)($castRow['default_start_time'] ?? ''));
         $startHm = preg_match('/^\d{2}:\d{2}/', $defaultStart)
@@ -522,7 +538,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $upPlan->execute([
           $storeId,
           $targetUserId,
-          $currentBusinessDate,
+          $targetBusinessDate,
           $startTime,
           $nextWorking ? 0 : 1,
           $note,
@@ -532,6 +548,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         json_response([
           'ok' => true,
           'kind' => 'shift',
+          'business_date' => $targetBusinessDate,
           'is_working' => $nextWorking,
           'label' => $nextWorking ? '出勤' : '休み',
           'start' => $nextWorking ? $startHm : '',
@@ -601,6 +618,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         json_response([
           'ok' => true,
           'kind' => 'transport',
+          'business_date' => $targetBusinessDate,
           'transport_needed' => $nextNeeded,
           'label' => $nextNeeded ? '送迎あり' : '送迎なし',
           'message' => $nextNeeded ? '送迎ありにしました' : '送迎なしにしました',
@@ -815,98 +833,126 @@ render_header('出勤予定（週）', [
     </div>
 
     <section class="card quickModeCard<?= $viewMode === 'quick' ? ' is-active' : '' ?>" id="quickModeSection">
-      <div class="quickModeHead">
-        <div>
-          <div class="quickModeEyebrow">Quick Attendance Mode</div>
-          <div class="quickModeTitle">今日の特急モード</div>
-          <div class="quickModeSub">
-            対象営業日：<b><?= h($quickDateLabel) ?></b>
-            <?php if (!$isQuickBusinessDateOpen): ?>
-              / 本日は店休日
-            <?php else: ?>
-              / 名前と店番をタップして出勤切替
-            <?php endif; ?>
-          </div>
-        </div>
-        <div class="quickModeLegend">
-          <span class="quickLegend is-work">出勤</span>
-          <span class="quickLegend is-off">休み</span>
-          <span class="quickLegend is-transport">送迎あり</span>
-        </div>
+      <div class="quickDaySwitch" role="tablist" aria-label="特急日付切替">
+        <?php foreach ($quickDates as $index => $quickDate): ?>
+          <button
+            type="button"
+            class="quickDayBtn<?= $index === 0 ? ' is-active' : '' ?>"
+            data-quick-day-switch="<?= h($quickDate) ?>"
+          >
+            <?= $index === 0 ? '今日' : '明日' ?>
+          </button>
+        <?php endforeach; ?>
       </div>
 
-      <div class="quickStats">
+      <?php foreach ($quickDates as $index => $quickDate): ?>
         <?php
+          $quickDateOpen = is_store_open_for_week_plan($pdo, $storeRow, $quickDate);
+          $quickDateLabel = substr($quickDate, 5) . '（' . jp_dow_label($quickDate) . '）';
+          $quickTitle = $index === 0 ? '今日の特急モード' : '明日の特急モード';
+          $quickHolidayLabel = $index === 0 ? '本日は店休日' : '明日は店休日';
+          $quickHolidayNotice = $index === 0
+            ? '本日は店休日設定のため、特急モードは編集できません。'
+            : '明日は店休日設定のため、特急モードは編集できません。';
           $quickWorkingCount = 0;
           $quickTransportCount = 0;
           foreach ($castRows as $quickCast) {
             $quickUid = (int)$quickCast['id'];
-            $quickPlan = $plans[$quickUid][$currentBusinessDate] ?? ['start'=>'','end'=>'LAST','douhan'=>false];
-            if (trim((string)($quickPlan['start'] ?? '')) !== '') {
+            $quickPlan = $plans[$quickUid][$quickDate] ?? ['start'=>'','end'=>'LAST','douhan'=>false];
+            if (plan_is_working($quickPlan)) {
               $quickWorkingCount++;
             }
-            if (transport_needed_state($quickCast)) {
+            if (quick_transport_active($quickCast, $quickPlan)) {
               $quickTransportCount++;
             }
           }
         ?>
-        <div class="quickStatCard">
-          <span>出勤予定</span>
-          <b id="quickWorkingCount"><?= (int)$quickWorkingCount ?></b>
-        </div>
-        <div class="quickStatCard">
-          <span>送迎あり</span>
-          <b id="quickTransportCount"><?= (int)$quickTransportCount ?></b>
-        </div>
-        <div class="quickStatCard">
-          <span>対象人数</span>
-          <b><?= count($castRows) ?></b>
-        </div>
-      </div>
+        <div
+          class="quickDayPanel<?= $index === 0 ? ' is-active' : '' ?>"
+          data-quick-day-panel="<?= h($quickDate) ?>"
+        >
+          <div class="quickModeHead">
+            <div>
+              <div class="quickModeEyebrow">Quick Attendance Mode</div>
+              <div class="quickModeTitle"><?= h($quickTitle) ?></div>
+              <div class="quickModeSub">
+                対象営業日：<b><?= h($quickDateLabel) ?></b>
+                <?php if (!$quickDateOpen): ?>
+                  / <?= h($quickHolidayLabel) ?>
+                <?php else: ?>
+                  / 名前と店番をタップして出勤切替
+                <?php endif; ?>
+              </div>
+            </div>
+            <div class="quickModeLegend">
+              <span class="quickLegend is-work">出勤</span>
+              <span class="quickLegend is-off">休み</span>
+              <span class="quickLegend is-transport">送迎あり</span>
+            </div>
+          </div>
 
-      <?php if (!$isQuickBusinessDateOpen): ?>
-        <div class="notice ng">本日は店休日設定のため、特急モードは編集できません。</div>
-      <?php endif; ?>
+          <div class="quickStats">
+            <div class="quickStatCard">
+              <span>出勤予定</span>
+              <b data-quick-working-count><?= (int)$quickWorkingCount ?></b>
+            </div>
+            <div class="quickStatCard">
+              <span>送迎あり</span>
+              <b data-quick-transport-count><?= (int)$quickTransportCount ?></b>
+            </div>
+            <div class="quickStatCard">
+              <span>対象人数</span>
+              <b><?= count($castRows) ?></b>
+            </div>
+          </div>
 
-      <div class="quickGrid">
-        <?php foreach ($castRows as $quickCast): ?>
-          <?php
-            $quickUid = (int)$quickCast['id'];
-            $quickPlan = $plans[$quickUid][$currentBusinessDate] ?? ['start'=>'','end'=>'LAST','douhan'=>false];
-            $quickWorking = trim((string)($quickPlan['start'] ?? '')) !== '';
-            $quickTransportNeeded = transport_needed_state($quickCast);
-            $quickReadonly = ($castOnly && $quickUid !== $userId) || !$isQuickBusinessDateOpen;
-            $quickCode = trim((string)($quickCast['staff_code'] ?? ''));
-          ?>
-          <article
-            class="quickCastCard<?= $quickWorking ? ' is-working' : ' is-off' ?><?= $quickTransportNeeded ? ' needs-transport' : '' ?><?= $quickReadonly ? ' is-readonly' : '' ?>"
-            data-quick-card
-            data-uid="<?= (int)$quickUid ?>"
-            data-working="<?= $quickWorking ? '1' : '0' ?>"
-            data-transport="<?= $quickTransportNeeded ? '1' : '0' ?>"
-          >
-            <button
-              type="button"
-              class="quickMainBtn"
-              data-quick-toggle="shift"
-              <?= $quickReadonly ? 'disabled' : '' ?>
-            >
-              <span class="quickCode"><?= h($quickCode !== '' ? $quickCode : '--') ?></span>
-              <span class="quickName"><?= h((string)$quickCast['display_name']) ?></span>
-              <span class="quickState" data-quick-shift-label><?= $quickWorking ? '出勤' : '休み' ?></span>
-            </button>
-            <button
-              type="button"
-              class="quickTransportBtn<?= $quickTransportNeeded ? ' is-on' : '' ?>"
-              data-quick-toggle="transport"
-              <?= $quickReadonly ? 'disabled' : '' ?>
-            >
-              <span>送迎</span>
-              <strong data-quick-transport-label><?= $quickTransportNeeded ? 'あり' : 'なし' ?></strong>
-            </button>
-          </article>
-        <?php endforeach; ?>
-      </div>
+          <?php if (!$quickDateOpen): ?>
+            <div class="notice ng"><?= h($quickHolidayNotice) ?></div>
+          <?php endif; ?>
+
+          <div class="quickGrid">
+            <?php foreach ($castRows as $quickCast): ?>
+              <?php
+                $quickUid = (int)$quickCast['id'];
+                $quickPlan = $plans[$quickUid][$quickDate] ?? ['start'=>'','end'=>'LAST','douhan'=>false];
+                $quickWorking = plan_is_working($quickPlan);
+                $quickTransportNeeded = transport_needed_state($quickCast);
+                $quickTransportActive = quick_transport_active($quickCast, $quickPlan);
+                $quickReadonly = ($castOnly && $quickUid !== $userId) || !$quickDateOpen;
+                $quickCode = trim((string)($quickCast['staff_code'] ?? ''));
+              ?>
+              <article
+                class="quickCastCard<?= $quickWorking ? ' is-working' : ' is-off' ?><?= $quickTransportActive ? ' needs-transport' : '' ?><?= $quickReadonly ? ' is-readonly' : '' ?>"
+                data-quick-card
+                data-business-date="<?= h($quickDate) ?>"
+                data-uid="<?= (int)$quickUid ?>"
+                data-working="<?= $quickWorking ? '1' : '0' ?>"
+                data-transport="<?= $quickTransportNeeded ? '1' : '0' ?>"
+              >
+                <button
+                  type="button"
+                  class="quickMainBtn"
+                  data-quick-toggle="shift"
+                  <?= $quickReadonly ? 'disabled' : '' ?>
+                >
+                  <span class="quickCode"><?= h($quickCode !== '' ? $quickCode : '--') ?></span>
+                  <span class="quickName"><?= h((string)$quickCast['display_name']) ?></span>
+                  <span class="quickState" data-quick-shift-label><?= $quickWorking ? '出勤' : '休み' ?></span>
+                </button>
+                <button
+                  type="button"
+                  class="quickTransportBtn<?= $quickTransportNeeded ? ' is-on' : '' ?>"
+                  data-quick-toggle="transport"
+                  <?= $quickReadonly ? 'disabled' : '' ?>
+                >
+                  <span>送迎</span>
+                  <strong data-quick-transport-label><?= $quickTransportNeeded ? 'あり' : 'なし' ?></strong>
+                </button>
+              </article>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      <?php endforeach; ?>
     </section>
 
     <div class="weeklyModeWrap<?= $viewMode === 'week' ? ' is-active' : '' ?>" id="weeklyModeSection">
@@ -1346,6 +1392,33 @@ body[data-theme="dark"] .notice{
   padding: 16px;
   display:none;
   gap: 14px;
+}
+.quickDaySwitch{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.quickDayBtn{
+  min-height:36px;
+  padding:0 14px;
+  border-radius:999px;
+  border:1px solid var(--line2);
+  background:var(--chip);
+  color:var(--txt);
+  font-weight:1000;
+  cursor:pointer;
+}
+.quickDayBtn.is-active{
+  background: var(--priBg);
+  border-color: color-mix(in srgb, var(--pri) 45%, var(--line2) 55%);
+  color: var(--pri);
+}
+.quickDayPanel{
+  display:none;
+  margin-top:14px;
+}
+.quickDayPanel.is-active{
+  display:block;
 }
 .quickModeHead{
   display:flex;
@@ -1977,21 +2050,23 @@ body[data-theme="dark"] .small{ color: var(--mut); }
 <script>
 (() => {
   const csrfToken = <?= json_encode(function_exists('csrf_token') ? csrf_token() : '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-  const quickBusinessDateOpen = <?= $isQuickBusinessDateOpen ? 'true' : 'false' ?>;
 
   function isReadonly(cell){
     return (cell?.dataset?.readonly === '1');
   }
 
-  function updateQuickCounts(){
+  function updateQuickCounts(panel){
+    if (!panel) return;
     let workingCount = 0;
     let transportCount = 0;
-    document.querySelectorAll('[data-quick-card]').forEach(card => {
-      if (card.dataset.working === '1') workingCount += 1;
-      if (card.dataset.transport === '1') transportCount += 1;
+    panel.querySelectorAll('[data-quick-card]').forEach(card => {
+      const isWorking = card.dataset.working === '1';
+      const needsTransport = card.dataset.transport === '1';
+      if (isWorking) workingCount += 1;
+      if (isWorking && needsTransport) transportCount += 1;
     });
-    const workingNode = document.getElementById('quickWorkingCount');
-    const transportNode = document.getElementById('quickTransportCount');
+    const workingNode = panel.querySelector('[data-quick-working-count]');
+    const transportNode = panel.querySelector('[data-quick-transport-count]');
     if (workingNode) workingNode.textContent = String(workingCount);
     if (transportNode) transportNode.textContent = String(transportCount);
   }
@@ -2005,20 +2080,23 @@ body[data-theme="dark"] .small{ color: var(--mut); }
 
     card.classList.toggle('is-working', isWorking);
     card.classList.toggle('is-off', !isWorking);
-    card.classList.toggle('needs-transport', needsTransport);
+    card.classList.toggle('needs-transport', isWorking && needsTransport);
     if (shiftLabel) shiftLabel.textContent = isWorking ? '出勤' : '休み';
     if (transportLabel) transportLabel.textContent = needsTransport ? 'あり' : 'なし';
     if (transportBtn) transportBtn.classList.toggle('is-on', needsTransport);
   }
 
   async function quickToggle(card, kind, button){
-    if (!card || !kind || !quickBusinessDateOpen) return;
+    if (!card || !kind) return;
     const uid = card.dataset.uid || '';
+    const businessDate = card.dataset.businessDate || '';
     if (!uid) return;
+    if (!businessDate) return;
 
     const body = new URLSearchParams();
     body.set('action', 'toggle_today_quick');
     body.set('target_user_id', uid);
+    body.set('target_business_date', businessDate);
     body.set('toggle_kind', kind);
     body.set('_csrf', csrfToken);
 
@@ -2046,7 +2124,7 @@ body[data-theme="dark"] .small{ color: var(--mut); }
         card.dataset.transport = data.transport_needed ? '1' : '0';
       }
       syncQuickCard(card);
-      updateQuickCounts();
+      updateQuickCounts(card.closest('[data-quick-day-panel]'));
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '保存に失敗しました');
     } finally {
@@ -2096,6 +2174,15 @@ body[data-theme="dark"] .small{ color: var(--mut); }
     document.querySelectorAll('.js-day-douhan-total').forEach(node => {
       const date = node.dataset.date || '';
       node.textContent = String(douhanTotals[date] || 0);
+    });
+  }
+
+  function setQuickDay(businessDate){
+    document.querySelectorAll('[data-quick-day-switch]').forEach(btn => {
+      btn.classList.toggle('is-active', btn.dataset.quickDaySwitch === businessDate);
+    });
+    document.querySelectorAll('[data-quick-day-panel]').forEach(panel => {
+      panel.classList.toggle('is-active', panel.dataset.quickDayPanel === businessDate);
     });
   }
 
@@ -2196,6 +2283,9 @@ body[data-theme="dark"] .small{ color: var(--mut); }
   document.querySelectorAll('[data-mode-switch]').forEach(btn => {
     btn.addEventListener('click', () => setMode(btn.dataset.modeSwitch || 'week'));
   });
+  document.querySelectorAll('[data-quick-day-switch]').forEach(btn => {
+    btn.addEventListener('click', () => setQuickDay(btn.dataset.quickDaySwitch || ''));
+  });
   document.querySelectorAll('[data-quick-card]').forEach(card => {
     syncQuickCard(card);
     card.querySelectorAll('[data-quick-toggle]').forEach(button => {
@@ -2203,7 +2293,7 @@ body[data-theme="dark"] .small{ color: var(--mut); }
       button.addEventListener('click', () => quickToggle(card, button.dataset.quickToggle || '', button));
     });
   });
-  updateQuickCounts();
+  document.querySelectorAll('[data-quick-day-panel]').forEach(panel => updateQuickCounts(panel));
 })();
 function weekRegularOn(uid){
   const cells = document.querySelectorAll(`.cell[data-uid="${uid}"]`);
