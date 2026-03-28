@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 const SERVICE_TRAINING_MISSION_SESSION_KEY = '__service_training_today_mission';
 const SERVICE_TRAINING_MISSION_RECENT_KEY = '__service_training_recent_missions';
+const SERVICE_TRAINING_MISSION_STATUS_KEY = '__service_training_mission_status_log';
 
 function service_training_mission_pool(): array {
   $rows = require __DIR__ . '/service_training_missions.php';
@@ -104,14 +105,14 @@ function service_training_generate_mission(
     $targetTypes = array_values(array_map('strval', (array)($mission['recommended_for_types'] ?? $mission['target_types'] ?? [])));
     $avoidRecentDays = (int)($mission['avoid_if_recent_days'] ?? 0);
 
+    if (isset($weakSkillTags[$skillTag])) {
+      $score += 34 + ((int)$weakSkillTags[$skillTag] * 8);
+    }
     if (in_array($typeKey, $targetTypes, true)) {
-      $score += 32;
+      $score += 22;
     }
     if (in_array($category, $recommendedCategories, true)) {
-      $score += 24;
-    }
-    if (isset($weakSkillTags[$skillTag])) {
-      $score += 14 + ((int)$weakSkillTags[$skillTag] * 6);
+      $score += 14;
     }
     if ($difficulty <= 1) {
       $score += 12;
@@ -181,4 +182,157 @@ function service_training_resolve_today_mission(
   ];
 
   return $mission;
+}
+
+function service_training_mission_reason(array $mission): string {
+  $reasons = [
+    'conversation_entry' => '最初の空気が、その席の流れを決めるから。',
+    'basic_manners' => '基本所作は、会話の前に安心感として伝わるから。',
+    'service_behavior' => '動き方ひとつで、丁寧さと余裕が見えるから。',
+    'air_reading' => '小さな先回りが、接客の完成度を上げるから。',
+    'silence' => '沈黙の扱い方で、落ち着きと接客力が伝わるから。',
+    'closing' => '最後の印象が、また会いたい気持ちにつながるから。',
+    'nomination' => '次回導線は、自然な一言の積み重ねで生まれるから。',
+    'appearance_strategy' => '見た目の整え方が、第一印象の信頼感を支えるから。',
+  ];
+  $category = (string)($mission['category'] ?? '');
+  return $reasons[$category] ?? '小さな行動が、その日の接客の流れを変えるから。';
+}
+
+function service_training_mission_status_meta(string $status): array {
+  $map = [
+    'done' => [
+      'label' => 'やった',
+      'button' => '✅ やった',
+      'feedback_title' => 'いいね 👍',
+      'feedback_body' => '少しずつ、今日の接客の土台が伸びています。',
+      'class' => 'is-done',
+    ],
+    'pending' => [
+      'label' => 'まだ',
+      'button' => '🤔 まだ',
+      'feedback_title' => 'その感覚で大丈夫 👍',
+      'feedback_body' => '今日はまだチャンスがあります。1回だけで十分です。',
+      'class' => 'is-pending',
+    ],
+    'skipped' => [
+      'label' => 'できなかった',
+      'button' => '❌ できなかった',
+      'feedback_title' => 'OK 👍',
+      'feedback_body' => '明日は“1回だけ”意識してみよう。',
+      'class' => 'is-skipped',
+    ],
+  ];
+  return $map[$status] ?? $map['pending'];
+}
+
+function service_training_save_mission_status(string $missionId, string $status, ?string $dateKey = null): void {
+  $allowed = ['done', 'pending', 'skipped'];
+  if ($missionId === '' || !in_array($status, $allowed, true)) {
+    return;
+  }
+  if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+  }
+  $dateKey = $dateKey ?: date('Y-m-d');
+  $rows = $_SESSION[SERVICE_TRAINING_MISSION_STATUS_KEY] ?? [];
+  if (!is_array($rows)) {
+    $rows = [];
+  }
+
+  $replaced = false;
+  foreach ($rows as $index => $row) {
+    if (!is_array($row)) {
+      continue;
+    }
+    if ((string)($row['date'] ?? '') === $dateKey) {
+      $rows[$index] = [
+        'date' => $dateKey,
+        'mission_id' => $missionId,
+        'status' => $status,
+      ];
+      $replaced = true;
+      break;
+    }
+  }
+  if (!$replaced) {
+    $rows[] = [
+      'date' => $dateKey,
+      'mission_id' => $missionId,
+      'status' => $status,
+    ];
+  }
+
+  usort($rows, static fn(array $a, array $b): int => strcmp((string)($a['date'] ?? ''), (string)($b['date'] ?? '')));
+  if (count($rows) > 30) {
+    $rows = array_slice($rows, -30);
+  }
+  $_SESSION[SERVICE_TRAINING_MISSION_STATUS_KEY] = array_values($rows);
+}
+
+function service_training_get_today_mission_status(string $missionId, ?string $dateKey = null): ?string {
+  if ($missionId === '') {
+    return null;
+  }
+  if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+  }
+  $dateKey = $dateKey ?: date('Y-m-d');
+  $rows = $_SESSION[SERVICE_TRAINING_MISSION_STATUS_KEY] ?? [];
+  if (!is_array($rows)) {
+    return null;
+  }
+  foreach (array_reverse($rows) as $row) {
+    if (!is_array($row)) {
+      continue;
+    }
+    if ((string)($row['date'] ?? '') !== $dateKey) {
+      continue;
+    }
+    if ((string)($row['mission_id'] ?? '') !== $missionId) {
+      continue;
+    }
+    return (string)($row['status'] ?? '');
+  }
+  return null;
+}
+
+function service_training_mission_streak(): int {
+  if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+  }
+  $rows = $_SESSION[SERVICE_TRAINING_MISSION_STATUS_KEY] ?? [];
+  if (!is_array($rows) || !$rows) {
+    return 0;
+  }
+
+  usort($rows, static fn(array $a, array $b): int => strcmp((string)($a['date'] ?? ''), (string)($b['date'] ?? '')));
+  $dates = [];
+  foreach ($rows as $row) {
+    if (!is_array($row)) {
+      continue;
+    }
+    if ((string)($row['status'] ?? '') !== 'done') {
+      continue;
+    }
+    $date = (string)($row['date'] ?? '');
+    if ($date !== '') {
+      $dates[$date] = true;
+    }
+  }
+  if (!$dates) {
+    return 0;
+  }
+
+  $streak = 0;
+  $cursor = new DateTimeImmutable('today');
+  while (true) {
+    $key = $cursor->format('Y-m-d');
+    if (!isset($dates[$key])) {
+      break;
+    }
+    $streak++;
+    $cursor = $cursor->modify('-1 day');
+  }
+  return $streak;
 }
