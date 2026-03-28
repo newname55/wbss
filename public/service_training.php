@@ -7,6 +7,7 @@ require_once __DIR__ . '/../app/layout.php';
 require_once __DIR__ . '/../app/service_quiz.php';
 require_once __DIR__ . '/../app/service_training.php';
 require_once __DIR__ . '/../app/service_training_mission_logic.php';
+require_once __DIR__ . '/../app/service_training_badge_logic.php';
 
 const SERVICE_TRAINING_SESSION_KEY = '__service_training_run';
 const SERVICE_TRAINING_RESULT_KEY = '__service_training_result';
@@ -434,6 +435,7 @@ $questionsPool = require __DIR__ . '/../app/service_training_questions.php';
 $growthMap = require __DIR__ . '/../app/service_training_growth_map.php';
 $categoryMeta = service_training_category_meta();
 $trainingHistoryReady = service_training_history_tables_ready($pdo);
+$missionLogsReady = service_training_mission_logs_table_ready($pdo);
 
 $error = '';
 $displayResult = null;
@@ -453,9 +455,14 @@ $weakSkillTagsForMission = $trainingHistoryReady
   : service_training_recent_weak_tags(5);
 $todayMission = service_training_resolve_today_mission($typeKey, $weakSkillTagsForMission, $growthTheme);
 $todayMissionId = (string)($todayMission['id'] ?? $todayMission['mission_id'] ?? '');
-$todayMissionStatus = $todayMissionId !== '' ? service_training_get_today_mission_status($todayMissionId) : null;
-$missionStreak = service_training_mission_streak();
+$todayMissionLog = $missionLogsReady ? service_training_get_today_mission_log($pdo, $storeId, $userId) : null;
+$todayMissionStatus = $missionLogsReady
+  ? (string)($todayMissionLog['status'] ?? '')
+  : ($todayMissionId !== '' ? service_training_get_today_mission_status($todayMissionId) : null);
+$missionStreak = $missionLogsReady ? service_training_done_streak($pdo, $storeId, $userId) : service_training_mission_streak();
 $currentPagePath = '/wbss/public/service_training.php' . (($_SERVER['QUERY_STRING'] ?? '') !== '' ? '?' . (string)$_SERVER['QUERY_STRING'] : '');
+$badgeState = service_training_user_badges($pdo, $storeId, $userId, $latestQuizResult);
+$newBadgeKeys = service_training_newly_earned_badge_keys((array)($badgeState['earned'] ?? []));
 
 if ($isQuestionMode && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
   service_training_start_run($questionsPool, $recommendedCategories, 8);
@@ -472,7 +479,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $missionId = trim((string)($_POST['mission_id'] ?? ''));
     $missionStatus = trim((string)($_POST['mission_status'] ?? ''));
     if ($missionId !== '' && $todayMissionId !== '' && $missionId === $todayMissionId) {
-      service_training_save_mission_status($missionId, $missionStatus);
+      if ($missionLogsReady) {
+        service_training_save_mission_log(
+          $pdo,
+          $storeId,
+          $userId,
+          $missionId,
+          (string)($todayMission['title'] ?? ''),
+          (string)($todayMission['category'] ?? ''),
+          (string)($todayMission['skill_tag'] ?? ''),
+          $missionStatus
+        );
+      } else {
+        service_training_save_mission_status($missionId, $missionStatus);
+      }
     }
     $returnTo = trim((string)($_POST['return_to'] ?? '/wbss/public/service_training.php'));
     if ($returnTo === '' || str_starts_with($returnTo, 'http')) {
@@ -727,6 +747,34 @@ render_header('接客マナートレーニング', [
           <h2>今日の一言</h2>
           <p class="trainingTip"><?= nl2br(h((string)($displayResult['today_tip'] ?? '今日は一つだけ丁寧さを足す意識で十分です。'))) ?></p>
         </div>
+
+        <div class="card trainingResultCard trainingResultCard--badges">
+          <div class="trainingResultCard__head">
+            <h2>バッジ</h2>
+            <a href="/wbss/public/service_badges.php" class="trainingResultLink">図鑑を見る</a>
+          </div>
+          <?php if (!empty($badgeState['earned'])): ?>
+            <div class="trainingBadgeList">
+              <?php foreach ((array)$badgeState['earned'] as $badge): ?>
+                <?php $isNewBadge = in_array((string)($badge['key'] ?? ''), $newBadgeKeys, true); ?>
+                <span class="trainingBadgeTag <?= $isNewBadge ? 'is-new' : 'is-earned' ?>"><?= h((string)($badge['name'] ?? '')) ?></span>
+              <?php endforeach; ?>
+            </div>
+          <?php else: ?>
+            <div class="trainingResultMeta">まだ獲得したバッジはありません。</div>
+          <?php endif; ?>
+
+          <?php if (!empty($badgeState['locked'])): ?>
+            <div class="trainingBadgeLockedList">
+              <?php foreach (array_slice((array)$badgeState['locked'], 0, 4) as $badge): ?>
+                <div class="trainingBadgeLockedItem">
+                  <span><?= h((string)($badge['name'] ?? '')) ?></span>
+                  <small><?= h((string)($badge['progress_text'] ?? '')) ?></small>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </div>
       </section>
 
       <div class="trainingActions">
@@ -874,12 +922,29 @@ render_header('接客マナートレーニング', [
 .trainingResultGrid{display:grid;grid-template-columns:repeat(2, 1fr);gap:18px}
 .trainingResultCard{padding:22px}
 .trainingResultCard h2{margin:0 0 14px;font-size:22px;font-weight:900}
+.trainingResultCard__head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.trainingResultLink{font-size:12px;font-weight:900;color:#b45309;text-decoration:none}
 .trainingResultCard--strong{border-color:#dbeafe;background:linear-gradient(180deg, #f8fbff 0%, #ffffff 100%)}
+.trainingResultCard--badges{border-color:#f5d8a8;background:linear-gradient(180deg, #fffaf0 0%, #ffffff 100%)}
 .trainingResultCard--tip{border-color:#f6d0ad;background:linear-gradient(180deg, #fff4e8 0%, #ffffff 100%)}
 .trainingResultList{margin:0;padding-left:1.2em}
 .trainingResultList li{margin-bottom:12px;line-height:1.8;color:#374151}
 .trainingResultMeta{margin-top:14px;color:#6b7280;font-size:13px;font-weight:700}
 .trainingTip{margin:0;line-height:2;font-size:16px;font-weight:800;color:#7c2d12}
+.trainingBadgeList{display:flex;flex-wrap:wrap;gap:10px}
+.trainingBadgeTag{
+  display:inline-flex;align-items:center;min-height:34px;padding:0 12px;border-radius:999px;
+  font-size:12px;font-weight:1000;border:1px solid #e5d7b0;background:#fff7e6;color:#8a4b12
+}
+.trainingBadgeTag.is-earned{background:#fff7e6}
+.trainingBadgeTag.is-new{background:#ffedd5;border-color:#fdba74;color:#9a3412;animation:badgeFadeIn .45s ease}
+.trainingBadgeLockedList{display:grid;gap:10px;margin-top:14px}
+.trainingBadgeLockedItem{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 13px;border-radius:14px;background:#f8fafc;border:1px solid #e5e7eb;
+  font-size:13px;font-weight:800;color:#374151
+}
+.trainingBadgeLockedItem small{font-size:12px;color:#6b7280;font-weight:800}
 .trainingActions{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px}
 .trainingActions--intro{margin-top:20px}
 body[data-theme="dark"] .trainingThemeCard,
@@ -894,6 +959,11 @@ body[data-theme="dark"] .trainingMissionCard{
 }
 body[data-theme="dark"] .trainingTypeChip,
 body[data-theme="dark"] .trainingTags span{
+  background:rgba(255,255,255,.08);
+  border-color:rgba(255,255,255,.12);
+}
+body[data-theme="dark"] .trainingBadgeLockedItem,
+body[data-theme="dark"] .trainingBadgeTag{
   background:rgba(255,255,255,.08);
   border-color:rgba(255,255,255,.12);
 }
@@ -912,7 +982,10 @@ body[data-theme="dark"] .trainingQuestionMeta,
 body[data-theme="dark"] .trainingCount,
 body[data-theme="dark"] .trainingProgressMeta,
 body[data-theme="dark"] .trainingResultList li,
-body[data-theme="dark"] .trainingResultMeta{
+body[data-theme="dark"] .trainingResultMeta,
+body[data-theme="dark"] .trainingBadgeLockedItem,
+body[data-theme="dark"] .trainingBadgeLockedItem small,
+body[data-theme="dark"] .trainingResultLink{
   color:rgba(230,223,240,.82);
 }
 body[data-theme="dark"] .trainingTitle,
@@ -962,6 +1035,10 @@ body[data-theme="dark"] .trainingMissionFeedback{background:#f8fafc;color:#11182
 @keyframes trainingChoiceTap{
   0%{transform:scale(.98)}
   100%{transform:scale(1)}
+}
+@keyframes badgeFadeIn{
+  0%{opacity:0;transform:translateY(6px)}
+  100%{opacity:1;transform:translateY(0)}
 }
 </style>
 <script>
