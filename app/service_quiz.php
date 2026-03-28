@@ -116,7 +116,7 @@ function service_quiz_normalize_answers(array $rawAnswers): array {
 function service_quiz_question_ids_by_category(): array {
   $grouped = [];
   foreach (service_quiz_questions() as $question) {
-    $category = (string)($question['category'] ?? 'misc');
+    $category = service_quiz_normalize_category_key((string)($question['category'] ?? 'misc'));
     $grouped[$category] ??= [];
     $grouped[$category][] = (int)$question['id'];
   }
@@ -207,7 +207,7 @@ function service_quiz_category_counts(array $questionIds): array {
     if (!isset($map[$questionId])) {
       continue;
     }
-    $category = (string)($map[$questionId]['category'] ?? 'misc');
+    $category = service_quiz_normalize_category_key((string)($map[$questionId]['category'] ?? 'misc'));
     $counts[$category] = (int)($counts[$category] ?? 0) + 1;
   }
   ksort($counts);
@@ -542,7 +542,7 @@ function service_quiz_save_history(PDO $pdo, int $resultId, int $storeId, int $c
       $storeId,
       $castId,
       $questionId,
-      (string)($questionMap[$questionId]['category'] ?? 'misc'),
+      service_quiz_normalize_category_key((string)($questionMap[$questionId]['category'] ?? 'misc')),
       $choiceKey,
       $answerScoresJson,
     ]);
@@ -613,7 +613,8 @@ function service_quiz_fetch_cumulative_summary(PDO $pdo, int $storeId, int $cast
   ");
   $stCategories->execute([$storeId, $castId]);
   foreach (($stCategories->fetchAll(PDO::FETCH_ASSOC) ?: []) as $row) {
-    $summary['category_counts'][(string)($row['question_category'] ?? 'misc')] = (int)($row['c'] ?? 0);
+    $categoryKey = service_quiz_normalize_category_key((string)($row['question_category'] ?? 'misc'));
+    $summary['category_counts'][$categoryKey] = (int)($summary['category_counts'][$categoryKey] ?? 0) + (int)($row['c'] ?? 0);
   }
 
   return $summary;

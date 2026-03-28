@@ -175,17 +175,29 @@ render_header('接客タイプ診断', [
         <form method="post" class="serviceQuizChoices">
           <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
           <input type="hidden" name="question_id" value="<?= (int)$currentQuestion['id'] ?>">
+          <input type="hidden" name="choice" value="" class="serviceQuizChoiceValue">
           <?php foreach ($currentAnswers as $answeredQuestionId => $answeredChoice): ?>
             <input type="hidden" name="answers[<?= (int)$answeredQuestionId ?>]" value="<?= h($answeredChoice) ?>">
           <?php endforeach; ?>
 
           <?php foreach ((array)$currentQuestion['choices'] as $choice): ?>
-            <button class="serviceQuizChoice" type="submit" name="choice" value="<?= h((string)$choice['key']) ?>">
+            <?php $choiceScores = (array)($choice['scores'] ?? []); ?>
+            <button
+              class="serviceQuizChoice quiz-option"
+              type="submit"
+              name="choice"
+              value="<?= h((string)$choice['key']) ?>"
+              data-score-talk="<?= (int)($choiceScores['talk_axis'] ?? 0) ?>"
+              data-score-mood="<?= (int)($choiceScores['mood_axis'] ?? 0) ?>"
+              data-score-response="<?= (int)($choiceScores['response_axis'] ?? 0) ?>"
+              data-score-relation="<?= (int)($choiceScores['relation_axis'] ?? 0) ?>"
+            >
               <span class="serviceQuizChoice__key"><?= h((string)$choice['key']) ?></span>
               <span class="serviceQuizChoice__text"><?= h((string)$choice['text']) ?></span>
             </button>
           <?php endforeach; ?>
         </form>
+        <div id="quiz-feedback" class="quiz-feedback hidden" aria-live="polite"></div>
       </section>
 
       <form method="post" class="serviceQuizRestart">
@@ -559,15 +571,53 @@ render_header('接客タイプ診断', [
 .serviceQuizChoice{
   display:flex;align-items:flex-start;gap:12px;width:100%;padding:16px;border-radius:18px;
   border:1px solid color-mix(in srgb, var(--accent) 18%, var(--line));background:rgba(255,255,255,.78);
-  color:var(--txt);font:inherit;text-align:left;cursor:pointer;transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease
+  color:var(--txt);font:inherit;text-align:left;cursor:pointer;transition:all .15s ease
 }
-.serviceQuizChoice:hover{transform:translateY(-1px);border-color:rgba(255,145,194,.56);box-shadow:0 16px 30px rgba(255,165,206,.12)}
+.serviceQuizChoice:hover,
+.quiz-option:hover{
+  transform:translateY(-1px);
+  background:#f9fafb;
+  border-color:rgba(255,145,194,.56);
+  box-shadow:0 16px 30px rgba(255,165,206,.12);
+}
+.serviceQuizChoice:active,
+.quiz-option:active{
+  transform:scale(.97);
+}
+.serviceQuizChoice.is-active,
+.quiz-option.active{
+  animation:quizChoiceTap .1s ease;
+  background:#fef3f2;
+  border-color:rgba(251,146,60,.38);
+  box-shadow:0 14px 28px rgba(251,146,60,.14);
+}
 .serviceQuizChoice__key{
   width:38px;height:38px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
   border-radius:14px;background:linear-gradient(180deg, rgba(255,245,250,.98), rgba(255,231,241,.92));
   border:1px solid rgba(255,182,211,.42);font-size:15px;font-weight:1000
 }
 .serviceQuizChoice__text{font-size:15px;line-height:1.65;font-weight:800}
+.quiz-feedback{
+  margin-top:12px;
+  padding:12px 14px;
+  border-radius:14px;
+  background:#111827;
+  color:#fff;
+  text-align:center;
+  font-size:14px;
+  line-height:1.6;
+  font-weight:800;
+  opacity:0;
+  transform:translateY(4px);
+}
+.quiz-feedback.show{
+  opacity:1;
+  transform:translateY(0);
+  transition:opacity .2s ease, transform .2s ease;
+}
+.quiz-feedback.hidden{
+  display:none;
+}
 .serviceQuizRestart{display:flex;justify-content:center}
 .serviceQuizNotice{padding:14px 16px;font-weight:800}
 .serviceQuizNotice--ok{border-color:rgba(111,224,176,.42);background:rgba(236,255,246,.8)}
@@ -1027,9 +1077,18 @@ body[data-theme="dark"] .cumulative-panel__headline{
   color:#fff8fc;
 }
 body[data-theme="dark"] .serviceQuizChoice__key{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.14)}
+body[data-theme="dark"] .serviceQuizChoice.is-active,
+body[data-theme="dark"] .quiz-option.active{
+  background:rgba(251,146,60,.18);
+  border-color:rgba(251,146,60,.34);
+}
 body[data-theme="dark"] .score-bar{background:rgba(255,255,255,.14)}
 body[data-theme="dark"] .score-bar-center{background:rgba(255,255,255,.36)}
 body[data-theme="dark"] .cumulative-panel__categories{border-top-color:rgba(255,255,255,.10)}
+body[data-theme="dark"] .quiz-feedback{
+  background:#f8fafc;
+  color:#111827;
+}
 @media (max-width: 960px){
   .result-hero{grid-template-columns:1fr}
   .score-grid{grid-template-columns:repeat(2, 1fr)}
@@ -1076,5 +1135,65 @@ body[data-theme="dark"] .cumulative-panel__categories{border-top-color:rgba(255,
   }
   .btn{width:100%}
 }
+@keyframes quizChoiceTap{
+  0%{transform:scale(.98)}
+  100%{transform:scale(1)}
+}
 </style>
+<script>
+(() => {
+  const feedbackEl = document.getElementById('quiz-feedback');
+  const choiceButtons = document.querySelectorAll('.serviceQuizChoice');
+  if (!feedbackEl || !choiceButtons.length) {
+    return;
+  }
+
+  const generateFeedback = (scores) => {
+    if (scores.mood <= -2) return '安心感が強い選択です';
+    if (scores.mood >= 2) return '盛り上げ力が出ています';
+    if (scores.response <= -2) return '観察力が出ています';
+    if (scores.response >= 2) return '直感タイプの動きです';
+    if (scores.relation >= 2) return '恋愛演出寄りです';
+    if (scores.relation <= -2) return '信頼構築寄りです';
+    if (scores.talk >= 2) return '主導力が自然に出ています';
+    if (scores.talk <= -2) return '受け止める力が出ています';
+    return 'バランスの良い選択です';
+  };
+
+  choiceButtons.forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+
+      const form = button.closest('form');
+      const choiceInput = form ? form.querySelector('.serviceQuizChoiceValue') : null;
+      if (!form || !choiceInput) {
+        return;
+      }
+
+      choiceButtons.forEach((item) => {
+        item.disabled = true;
+        item.classList.remove('is-active', 'active');
+      });
+
+      button.classList.add('is-active', 'active');
+      choiceInput.value = button.value;
+
+      const scores = {
+        talk: Number(button.dataset.scoreTalk || 0),
+        mood: Number(button.dataset.scoreMood || 0),
+        response: Number(button.dataset.scoreResponse || 0),
+        relation: Number(button.dataset.scoreRelation || 0),
+      };
+
+      feedbackEl.textContent = generateFeedback(scores);
+      feedbackEl.classList.remove('hidden');
+      feedbackEl.classList.add('show');
+
+      window.setTimeout(() => {
+        form.submit();
+      }, 1000);
+    });
+  });
+})();
+</script>
 <?php render_page_end(); ?>

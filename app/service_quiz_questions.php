@@ -37,76 +37,98 @@ function service_quiz_question(
   return $item;
 }
 
+function service_quiz_category_aliases(): array {
+  return [
+    'first_impression' => 'first_contact',
+    'quiet_guest' => 'quiet_customer',
+    'tired_guest' => 'tired_customer',
+    'romance' => 'love_talk',
+    'energy' => 'high_tension',
+    'silence_break' => 'silence',
+    'farewell' => 'closing',
+    'nomination' => 'nomination',
+  ];
+}
+
+function service_quiz_normalize_category_key(string $category): string {
+  $category = trim($category);
+  if ($category === '') {
+    return 'misc';
+  }
+  $aliases = service_quiz_category_aliases();
+  return $aliases[$category] ?? $category;
+}
+
 function service_quiz_category_specs(): array {
   return [
-    'first_impression' => ['label' => '初対面対応', 'min' => 1, 'soft_max' => 2],
-    'quiet_guest' => ['label' => '静かな客対応', 'min' => 1, 'soft_max' => 2],
-    'tired_guest' => ['label' => '疲れた客対応', 'min' => 1, 'soft_max' => 2],
-    'romance' => ['label' => '恋愛系対応', 'min' => 1, 'soft_max' => 2],
-    'energy' => ['label' => '盛り上げ系対応', 'min' => 1, 'soft_max' => 2],
-    'silence_break' => ['label' => '会話停止時', 'min' => 1, 'soft_max' => 2],
-    'farewell' => ['label' => '帰り際', 'min' => 1, 'soft_max' => 2],
+    'first_contact' => ['label' => '初対面対応', 'min' => 1, 'soft_max' => 2],
+    'quiet_customer' => ['label' => '静かな客対応', 'min' => 1, 'soft_max' => 2],
+    'tired_customer' => ['label' => '疲れた客対応', 'min' => 1, 'soft_max' => 2],
+    'love_talk' => ['label' => '恋愛系対応', 'min' => 1, 'soft_max' => 2],
+    'high_tension' => ['label' => '盛り上げ系対応', 'min' => 1, 'soft_max' => 2],
+    'silence' => ['label' => '会話停止時', 'min' => 1, 'soft_max' => 2],
+    'closing' => ['label' => '帰り際', 'min' => 1, 'soft_max' => 2],
     'nomination' => ['label' => '指名導線', 'min' => 1, 'soft_max' => 2],
   ];
 }
 
 function service_quiz_questions(): array {
   return [
-    service_quiz_question(1, 'tired_guest', 'Q1', '最近ちょっと仕事しんどくてさ', 'customer_quote', [
+    service_quiz_question(1, 'tired_customer', 'Q1', '最近ちょっと仕事しんどくてさ', 'customer_quote', [
       service_quiz_choice('A', 'え、大丈夫？かなり忙しいの？', -1, -1, -1, -2),
       service_quiz_choice('B', 'それはしんどいね。今日はゆっくりできるといいね', -2, -2, -1, -2),
       service_quiz_choice('C', 'じゃあ今日はここで元気になって帰ってもらわないと', 2, 2, 1, 1),
       service_quiz_choice('D', '何が一番しんどい？人間関係？仕事量？', 1, -1, -2, -1),
     ]),
-    service_quiz_question(2, 'first_impression', 'Q2', '俺、人見知りなんだよね', 'customer_quote', [
+    service_quiz_question(2, 'first_contact', 'Q2', '俺、人見知りなんだよね', 'customer_quote', [
       service_quiz_choice('A', 'え、今は普通に話しやすいけどな', 1, 1, 1, 1),
       service_quiz_choice('B', 'じゃあ今日は無理にしゃべらなくても大丈夫だよ', -2, -2, -1, -2),
       service_quiz_choice('C', '最初そう言う人の方が、仲良くなると面白かったりするよね', 1, 1, 1, 0),
       service_quiz_choice('D', '最初って緊張するよね、わかる', -1, -2, -1, -2),
     ]),
-    service_quiz_question(3, 'romance', 'Q3', '俺、昔かなりモテてたんだよ', 'customer_quote', [
+    service_quiz_question(3, 'love_talk', 'Q3', '俺、昔かなりモテてたんだよ', 'customer_quote', [
       service_quiz_choice('A', 'え、なんかわかる。雰囲気あるもん', 1, 1, 1, 2),
       service_quiz_choice('B', 'へえ、どんな感じだったの？気になる', 0, 0, -1, -1),
       service_quiz_choice('C', '今も普通にモテそうだけどね', 1, 1, 2, 2),
       service_quiz_choice('D', 'その頃って自分でも楽しかった？', -1, -1, -2, -1),
     ]),
-    service_quiz_question(4, 'silence_break', 'Q4', '静かめなお客様で、会話が少し止まった', 'situation', [
+    service_quiz_question(4, 'silence', 'Q4', '静かめなお客様で、会話が少し止まった', 'situation', [
       service_quiz_choice('A', '自分から軽く話題を出して空気を動かす', 2, 1, 1, 0),
       service_quiz_choice('B', '無理に埋めず、相手のペースを待つ', -2, -2, -2, -2),
       service_quiz_choice('C', '「緊張してる？」とやわらかく聞く', -1, -2, -1, -1),
       service_quiz_choice('D', '相手の視線や表情を見て、反応がありそうな話題を探す', -1, -1, -2, -1),
     ], 'あなたが自然にしやすい動きは？'),
-    service_quiz_question(5, 'first_impression', 'Q5', '初対面のお客様につくことになった', 'situation', [
+    service_quiz_question(5, 'first_contact', 'Q5', '初対面のお客様につくことになった', 'situation', [
       service_quiz_choice('A', 'まず自分から明るく入って場を作る', 2, 2, 1, 1),
       service_quiz_choice('B', '相手が話しやすいように、質問しながら様子を見る', -1, -1, -2, -1),
       service_quiz_choice('C', '安心してもらえるように、やわらかい空気を作る', -2, -2, -1, -2),
       service_quiz_choice('D', '少し特別感のある言い方で印象を残す', 1, 1, 1, 2),
     ], '最初に意識しやすいのは？'),
-    service_quiz_question(6, 'energy', 'Q6', 'テンションが高く、どんどん話してくる', 'customer_state', [
+    service_quiz_question(6, 'high_tension', 'Q6', 'テンションが高く、どんどん話してくる', 'customer_state', [
       service_quiz_choice('A', '同じテンション感で乗って返す', 2, 2, 2, 1),
       service_quiz_choice('B', '少し落ち着きつつ、聞き役に回る', -2, -2, -1, -2),
       service_quiz_choice('C', '要所だけ盛り上げて、全体は整える', 1, 1, -2, -1),
       service_quiz_choice('D', 'この人が何を求めて話してるかを見ながら合わせる', -1, 0, -2, -1),
     ], 'あなたの自然な対応は？'),
-    service_quiz_question(7, 'tired_guest', 'Q7', '最近ほんと人間関係だるいんだよね', 'customer_quote', [
+    service_quiz_question(7, 'tired_customer', 'Q7', '最近ほんと人間関係だるいんだよね', 'customer_quote', [
       service_quiz_choice('A', 'それめっちゃしんどいやつだね', -1, -2, 1, -2),
       service_quiz_choice('B', '誰かに気を使いすぎてる感じ？', 0, -1, -2, -1),
       service_quiz_choice('C', '今日はもうそういうの忘れる日にしよ', 2, 2, 1, 0),
       service_quiz_choice('D', 'ちゃんと頑張ってる人ほど疲れるよね', -1, -2, -1, -2),
     ]),
-    service_quiz_question(8, 'romance', 'Q8', '〇〇ちゃんってモテそうだよね', 'customer_quote', [
+    service_quiz_question(8, 'love_talk', 'Q8', '〇〇ちゃんってモテそうだよね', 'customer_quote', [
       service_quiz_choice('A', 'どうだろう、でもそう見えてたらちょっとうれしいかも', 0, 1, 1, 2),
       service_quiz_choice('B', 'え、急にそういうこと言うのずるくない？', 2, 1, 2, 2),
       service_quiz_choice('C', 'ありがとう。でも話しやすいって言われる方がうれしいかも', -1, -1, -1, -2),
       service_quiz_choice('D', 'なんでそう思ったの？', 0, 0, -2, 0),
     ]),
-    service_quiz_question(9, 'romance', 'Q9', 'お客様に褒められたとき', 'situation', [
+    service_quiz_question(9, 'love_talk', 'Q9', 'お客様に褒められたとき', 'situation', [
       service_quiz_choice('A', 'ちょっと照れつつ、うれしさを素直に返す', 0, 1, 1, 1),
       service_quiz_choice('B', '冗談っぽく返して空気を軽くする', 2, 2, 2, 0),
       service_quiz_choice('C', '「ありがとう」と丁寧に受け取る', -1, -1, -1, -2),
       service_quiz_choice('D', '相手がなぜそう言ったか少し考える', -1, -1, -2, -1),
     ], 'あなたの自然な反応は？'),
-    service_quiz_question(10, 'silence_break', 'Q10', '場が少し盛り上がり切らない', 'situation', [
+    service_quiz_question(10, 'silence', 'Q10', '場が少し盛り上がり切らない', 'situation', [
       service_quiz_choice('A', '自分からネタを出して空気を変える', 2, 2, 1, 0),
       service_quiz_choice('B', '相手の話したそうな話題を探る', -1, -1, -2, -1),
       service_quiz_choice('C', '落ち着いた会話でもいいと割り切る', -2, -2, -1, -2),
@@ -118,49 +140,49 @@ function service_quiz_questions(): array {
       service_quiz_choice('C', '少しだけ特別扱いっぽさを出す', 1, 1, 1, 2),
       service_quiz_choice('D', '相手の話をちゃんと覚えていそうと思わせる', -1, -1, -2, -2),
     ], 'あなたが意識しやすいのは？'),
-    service_quiz_question(12, 'farewell', 'Q12', 'お客様が帰る直前', 'situation', [
+    service_quiz_question(12, 'closing', 'Q12', 'お客様が帰る直前', 'situation', [
       service_quiz_choice('A', '今日はありがとう、また絶対話そうね', 1, 1, 1, 1),
       service_quiz_choice('B', '気をつけて帰ってね、今日はゆっくり休んでね', -2, -2, -1, -2),
       service_quiz_choice('C', '次来たとき、今日の続き聞かせて', 0, 0, -1, -2),
       service_quiz_choice('D', '今日ちょっと特別に楽しかった', 1, 1, 1, 2),
     ], '最後に自然に出やすいのは？'),
-    service_quiz_question(13, 'first_impression', 'Q13', '最初の1分で印象を作りたい場面', 'situation', [
+    service_quiz_question(13, 'first_contact', 'Q13', '最初の1分で印象を作りたい場面', 'situation', [
       service_quiz_choice('A', '自分からテンポよく話して、場を温める', 2, 2, 1, 0),
       service_quiz_choice('B', '相手の反応を見ながら、入り方を調整する', -1, 0, -2, -1),
       service_quiz_choice('C', 'まずは笑顔とやわらかさで安心させる', -2, -2, -1, -2),
       service_quiz_choice('D', '少し印象に残る一言を入れて覚えてもらう', 1, 1, 1, 2),
     ], '最初に取りやすい動きは？'),
-    service_quiz_question(14, 'quiet_guest', 'Q14', '無口なお客様が静かに飲んでいる', 'customer_state', [
+    service_quiz_question(14, 'quiet_customer', 'Q14', '無口なお客様が静かに飲んでいる', 'customer_state', [
       service_quiz_choice('A', '軽い話題を自分から置いてみる', 2, 1, 1, 0),
       service_quiz_choice('B', '反応が出るまで無理に詰めない', -2, -2, -2, -2),
       service_quiz_choice('C', '飲み方や表情から気分を読んで話題を選ぶ', -1, -1, -2, -1),
       service_quiz_choice('D', 'ひとことだけ距離を縮める言い方をしてみる', 1, 0, 1, 2),
     ], '自然にしやすい対応は？'),
-    service_quiz_question(15, 'tired_guest', 'Q15', '今日はもう何も考えたくないかも、と言われた', 'customer_quote', [
+    service_quiz_question(15, 'tired_customer', 'Q15', '今日はもう何も考えたくないかも、と言われた', 'customer_quote', [
       service_quiz_choice('A', 'じゃあ今日はゆるく過ごそっか', -2, -2, -1, -2),
       service_quiz_choice('B', 'それだけ頑張ってきたってことだよね', -1, -2, -1, -2),
       service_quiz_choice('C', 'ここでは考えなくていいようにするね', 1, 1, 1, 0),
       service_quiz_choice('D', '何かひとつだけ話したいことある？', 0, -1, -2, -1),
     ]),
-    service_quiz_question(16, 'romance', 'Q16', '「今日ちょっと雰囲気違うね」と言われた', 'customer_quote', [
+    service_quiz_question(16, 'love_talk', 'Q16', '「今日ちょっと雰囲気違うね」と言われた', 'customer_quote', [
       service_quiz_choice('A', 'え、気づいた？ちょっとうれしい', 0, 1, 1, 2),
       service_quiz_choice('B', 'そういうのさらっと言うの反則じゃない？', 2, 1, 2, 2),
       service_quiz_choice('C', 'ありがとう。でも話しやすい方が大事かも', -1, -1, -1, -2),
       service_quiz_choice('D', 'どこが違って見えた？', 0, 0, -2, 0),
     ]),
-    service_quiz_question(17, 'energy', 'Q17', '団体席で会話の温度差が大きい', 'situation', [
+    service_quiz_question(17, 'high_tension', 'Q17', '団体席で会話の温度差が大きい', 'situation', [
       service_quiz_choice('A', '自分が真ん中でテンポを作る', 2, 2, 1, 0),
       service_quiz_choice('B', '静かな人も拾えるように順番に振る', 1, 0, -2, -1),
       service_quiz_choice('C', '一番盛り上がってる流れにまず乗る', 2, 2, 2, 1),
       service_quiz_choice('D', '無理に全員を同じ温度にしない', -1, -1, -1, -2),
     ], '取りやすい立ち回りは？'),
-    service_quiz_question(18, 'silence_break', 'Q18', '話題が切れたあと、少し気まずい空気が流れた', 'situation', [
+    service_quiz_question(18, 'silence', 'Q18', '話題が切れたあと、少し気まずい空気が流れた', 'situation', [
       service_quiz_choice('A', 'すぐ軽いネタを入れて切り替える', 2, 2, 1, 0),
       service_quiz_choice('B', '相手の飲み物や仕草から次の話題を探す', -1, -1, -2, -1),
       service_quiz_choice('C', '気まずさごと笑いに変える', 2, 2, 2, 1),
       service_quiz_choice('D', '少し間を置いて相手のペースを待つ', -2, -2, -2, -2),
     ], '自然にしやすいのは？'),
-    service_quiz_question(19, 'farewell', 'Q19', '「今日は来てよかった」と言われた帰り際', 'customer_quote', [
+    service_quiz_question(19, 'closing', 'Q19', '「今日は来てよかった」と言われた帰り際', 'customer_quote', [
       service_quiz_choice('A', 'それ聞けるとうれしい。また話そうね', 1, 1, 1, 1),
       service_quiz_choice('B', 'ありがとう。ちゃんと休んで帰ってね', -2, -2, -1, -2),
       service_quiz_choice('C', '次も今日くらい楽にしていこうね', 0, -1, -1, -2),
@@ -172,19 +194,19 @@ function service_quiz_questions(): array {
       service_quiz_choice('C', '次はもう少し特別に話したいかも', 1, 1, 1, 2),
       service_quiz_choice('D', '今日のこと、ちゃんと覚えておくね', -1, -1, -2, -2),
     ]),
-    service_quiz_question(21, 'quiet_guest', 'Q21', '質問には答えるけど、自分からはあまり話さない', 'customer_state', [
+    service_quiz_question(21, 'quiet_customer', 'Q21', '質問には答えるけど、自分からはあまり話さない', 'customer_state', [
       service_quiz_choice('A', '短い問いかけを重ねて少しずつ開く', 1, 0, -2, -1),
       service_quiz_choice('B', '沈黙も含めて居心地を優先する', -2, -2, -2, -2),
       service_quiz_choice('C', 'こちらの話を少し多めにして流れを作る', 2, 1, 1, 0),
       service_quiz_choice('D', '共通点を探して一点突破する', 1, 1, -1, 1),
     ], '取りやすい対応は？'),
-    service_quiz_question(22, 'tired_guest', 'Q22', '「最近ずっと寝不足なんだよね」と言われた', 'customer_quote', [
+    service_quiz_question(22, 'tired_customer', 'Q22', '「最近ずっと寝不足なんだよね」と言われた', 'customer_quote', [
       service_quiz_choice('A', 'それはきついね、今日は無理しないでいこう', -2, -2, -1, -2),
       service_quiz_choice('B', 'ちゃんと休めてないんだね', -1, -2, -1, -2),
       service_quiz_choice('C', 'ここではちょっと回復して帰ってほしいな', 2, 2, 1, 0),
       service_quiz_choice('D', '仕事？生活リズム？どっちが大きい？', 1, -1, -2, -1),
     ]),
-    service_quiz_question(23, 'energy', 'Q23', '相手が「今日はテンション高めで飲みたい」と言った', 'customer_quote', [
+    service_quiz_question(23, 'high_tension', 'Q23', '相手が「今日はテンション高めで飲みたい」と言った', 'customer_quote', [
       service_quiz_choice('A', 'じゃあ今日は最初から飛ばしていこう', 2, 2, 2, 1),
       service_quiz_choice('B', '了解、でも疲れたらすぐ言ってね', 0, -1, -1, -1),
       service_quiz_choice('C', '盛り上げつつ、ちゃんと拾っていくね', 1, 1, -1, 0),
