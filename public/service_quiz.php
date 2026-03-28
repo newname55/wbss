@@ -192,9 +192,21 @@ render_header('接客タイプ診断', [
           'matches' => (array)($type['best_customers'] ?? []),
           'today_tip' => (string)($type['today_tip'] ?? ''),
         ];
+        $typeThemes = [
+          'calm_empath' => ['bar' => 'linear-gradient(90deg, #f5a8c8 0%, #ef7cae 100%)', 'tip_bg' => 'linear-gradient(180deg, #fff1f7 0%, #fff8fb 100%)', 'tip_border' => '#f2bfd5'],
+          'soft_healer' => ['bar' => 'linear-gradient(90deg, #7bdcb5 0%, #4fbf9f 100%)', 'tip_bg' => 'linear-gradient(180deg, #effcf7 0%, #f8fffc 100%)', 'tip_border' => '#bfead9'],
+          'energy_booster' => ['bar' => 'linear-gradient(90deg, #f59e0b 0%, #ef4444 100%)', 'tip_bg' => 'linear-gradient(180deg, #fff4e8 0%, #fff9f2 100%)', 'tip_border' => '#f6d0ad'],
+          'flow_leader' => ['bar' => 'linear-gradient(90deg, #f59e0b 0%, #f97316 50%, #ef4444 100%)', 'tip_bg' => 'linear-gradient(180deg, #fff1e8 0%, #fff8f4 100%)', 'tip_border' => '#f5c2a3'],
+          'sweet_spark' => ['bar' => 'linear-gradient(90deg, #fb7185 0%, #ec4899 100%)', 'tip_bg' => 'linear-gradient(180deg, #fff0f5 0%, #fff8fb 100%)', 'tip_border' => '#f5bfd2'],
+          'elegant_calm' => ['bar' => 'linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%)', 'tip_bg' => 'linear-gradient(180deg, #f5f3ff 0%, #faf8ff 100%)', 'tip_border' => '#d8ccff'],
+          'silent_analyzer' => ['bar' => 'linear-gradient(90deg, #60a5fa 0%, #2563eb 100%)', 'tip_bg' => 'linear-gradient(180deg, #eef6ff 0%, #f8fbff 100%)', 'tip_border' => '#bdd7ff'],
+          'all_rounder' => ['bar' => 'linear-gradient(90deg, #94a3b8 0%, #64748b 100%)', 'tip_bg' => 'linear-gradient(180deg, #f4f6f8 0%, #fbfcfd 100%)', 'tip_border' => '#d7dee7'],
+        ];
+        $theme = $typeThemes[$resultView['type']] ?? $typeThemes['all_rounder'];
+        $minusBar = 'linear-gradient(90deg, #93c5fd 0%, #60a5fa 100%)';
         $imagePath = '/wbss/public/images/cast_type_images/' . rawurlencode($resultView['type']) . '.png';
       ?>
-      <div class="cast-type-result-page">
+      <div class="cast-type-result-page" style="--result-tip-bg: <?= h($theme['tip_bg']) ?>; --result-tip-border: <?= h($theme['tip_border']) ?>;">
         <?php if ($saveNotice !== ''): ?>
           <div class="result-notice"><?= h($saveNotice) ?></div>
         <?php endif; ?>
@@ -202,7 +214,7 @@ render_header('接客タイプ診断', [
         <div class="cast-type-result-header">
           <div>
             <h1>接客タイプ診断</h1>
-            <p class="cast-type-result-sub">今の接客スタイルを、カードで見返しやすくまとめています。</p>
+            <p class="cast-type-result-sub">今の接客スタイルを、見返しやすく整理しました。</p>
           </div>
         </div>
 
@@ -219,7 +231,6 @@ render_header('接客タイプ診断', [
             <div class="type-badge">あなたの接客タイプ</div>
             <h2 class="type-title"><?= h($resultView['type_label']) ?></h2>
             <p class="type-copy"><?= h($resultView['copy']) ?></p>
-            <p class="type-subtitle"><?= h($resultView['type_en']) ?></p>
             <p class="type-description"><?= nl2br(h($resultView['summary'])) ?></p>
             <?php if ($resultView['saved_at'] !== ''): ?>
               <div class="saved-at">保存日時: <?= h($resultView['saved_at']) ?></div>
@@ -231,28 +242,92 @@ render_header('接客タイプ診断', [
           <h3>スコア</h3>
           <div class="score-grid">
             <div class="score-item">
-              <div class="score-item__label">会話</div>
-              <div class="score-item__value"><?= (int)$resultView['talk_score'] ?></div>
+              <?php $talkScore = (int)$resultView['talk_score']; ?>
+              <div class="score-header">
+                <span class="score-item__label">会話</span>
+                <div class="score-value-group">
+                  <span class="score-side-label"><?= $talkScore < 0 ? '受容寄り' : ($talkScore > 0 ? '主導寄り' : '中間') ?></span>
+                  <span class="score-item__value"><?= abs($talkScore) ?></span>
+                </div>
+              </div>
+              <div class="score-direction"><span>← 受容</span><span>主導 →</span></div>
+                <div class="score-bar">
+                  <div class="score-bar-center"></div>
+                <?php if ($talkScore < 0): ?>
+                  <?php $talkWidth = min(50.0, max(4.0, (abs($talkScore) / 10) * 50)); ?>
+                  <div class="score-bar__fill minus" style="width: <?= $talkWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
+                <?php elseif ($talkScore > 0): ?>
+                  <?php $talkWidth = min(50.0, max(4.0, ($talkScore / 10) * 50)); ?>
+                  <div class="score-bar__fill plus" style="width: <?= $talkWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
+                <?php endif; ?>
+              </div>
               <div class="score-item__sub"><?= h($resultView['talk_label']) ?></div>
-              <div class="score-bar"><div class="score-bar__fill" style="width: <?= min(100, max(0, ($resultView['talk_score'] / 6) * 100)) ?>%;"></div></div>
             </div>
             <div class="score-item">
-              <div class="score-item__label">空気</div>
-              <div class="score-item__value"><?= (int)$resultView['mood_score'] ?></div>
+              <?php $moodScore = (int)$resultView['mood_score']; ?>
+              <div class="score-header">
+                <span class="score-item__label">空気</span>
+                <div class="score-value-group">
+                  <span class="score-side-label"><?= $moodScore < 0 ? '安心寄り' : ($moodScore > 0 ? '盛り上げ寄り' : '中間') ?></span>
+                  <span class="score-item__value"><?= abs($moodScore) ?></span>
+                </div>
+              </div>
+              <div class="score-direction"><span>← 安心</span><span>盛り上げ →</span></div>
+              <div class="score-bar">
+                <div class="score-bar-center"></div>
+                <?php if ($moodScore < 0): ?>
+                  <?php $moodWidth = min(50.0, max(4.0, (abs($moodScore) / 10) * 50)); ?>
+                  <div class="score-bar__fill minus" style="width: <?= $moodWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
+                <?php elseif ($moodScore > 0): ?>
+                  <?php $moodWidth = min(50.0, max(4.0, ($moodScore / 10) * 50)); ?>
+                  <div class="score-bar__fill plus" style="width: <?= $moodWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
+                <?php endif; ?>
+              </div>
               <div class="score-item__sub"><?= h($resultView['mood_label']) ?></div>
-              <div class="score-bar"><div class="score-bar__fill" style="width: <?= min(100, max(0, ($resultView['mood_score'] / 6) * 100)) ?>%;"></div></div>
             </div>
             <div class="score-item">
-              <div class="score-item__label">反応</div>
-              <div class="score-item__value"><?= (int)$resultView['response_score'] ?></div>
+              <?php $responseScore = (int)$resultView['response_score']; ?>
+              <div class="score-header">
+                <span class="score-item__label">反応</span>
+                <div class="score-value-group">
+                  <span class="score-side-label"><?= $responseScore < 0 ? '観察寄り' : ($responseScore > 0 ? '直感寄り' : '中間') ?></span>
+                  <span class="score-item__value"><?= abs($responseScore) ?></span>
+                </div>
+              </div>
+              <div class="score-direction"><span>← 観察</span><span>直感 →</span></div>
+              <div class="score-bar">
+                <div class="score-bar-center"></div>
+                <?php if ($responseScore < 0): ?>
+                  <?php $responseWidth = min(50.0, max(4.0, (abs($responseScore) / 10) * 50)); ?>
+                  <div class="score-bar__fill minus" style="width: <?= $responseWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
+                <?php elseif ($responseScore > 0): ?>
+                  <?php $responseWidth = min(50.0, max(4.0, ($responseScore / 10) * 50)); ?>
+                  <div class="score-bar__fill plus" style="width: <?= $responseWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
+                <?php endif; ?>
+              </div>
               <div class="score-item__sub"><?= h($resultView['response_label']) ?></div>
-              <div class="score-bar"><div class="score-bar__fill" style="width: <?= min(100, max(0, ($resultView['response_score'] / 6) * 100)) ?>%;"></div></div>
             </div>
             <div class="score-item">
-              <div class="score-item__label">関係性</div>
-              <div class="score-item__value"><?= (int)$resultView['relation_score'] ?></div>
+              <?php $relationScore = (int)$resultView['relation_score']; ?>
+              <div class="score-header">
+                <span class="score-item__label">関係性</span>
+                <div class="score-value-group">
+                  <span class="score-side-label"><?= $relationScore < 0 ? '信頼寄り' : ($relationScore > 0 ? '恋愛演出寄り' : '中間') ?></span>
+                  <span class="score-item__value"><?= abs($relationScore) ?></span>
+                </div>
+              </div>
+              <div class="score-direction"><span>← 信頼</span><span>恋愛演出 →</span></div>
+              <div class="score-bar">
+                <div class="score-bar-center"></div>
+                <?php if ($relationScore < 0): ?>
+                  <?php $relationWidth = min(50.0, max(4.0, (abs($relationScore) / 10) * 50)); ?>
+                  <div class="score-bar__fill minus" style="width: <?= $relationWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
+                <?php elseif ($relationScore > 0): ?>
+                  <?php $relationWidth = min(50.0, max(4.0, ($relationScore / 10) * 50)); ?>
+                  <div class="score-bar__fill plus" style="width: <?= $relationWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
+                <?php endif; ?>
+              </div>
               <div class="score-item__sub"><?= h($resultView['relation_label']) ?></div>
-              <div class="score-bar"><div class="score-bar__fill" style="width: <?= min(100, max(0, ($resultView['relation_score'] / 6) * 100)) ?>%;"></div></div>
             </div>
           </div>
         </section>
@@ -382,7 +457,7 @@ render_header('接客タイプ診断', [
 .cast-type-result-sub{
   margin:8px 0 0;
   color:#6b7280;
-  font-size:14px;
+  font-size:13px;
   line-height:1.7;
 }
 .result-notice{
@@ -424,8 +499,8 @@ render_header('接客タイプ診断', [
   border:1px solid #edf0f5;
 }
 .card-panel--highlight{
-  background:linear-gradient(180deg, #fff7fb 0%, #ffffff 100%);
-  border:1px solid #f4d9e7;
+  background:var(--result-tip-bg, linear-gradient(180deg, #fff7fb 0%, #ffffff 100%));
+  border:1px solid var(--result-tip-border, #f4d9e7);
   box-shadow:0 20px 52px rgba(201,70,120,.12);
 }
 .type-badge{
@@ -447,18 +522,10 @@ render_header('接客タイプ診断', [
   font-weight:900;
   letter-spacing:.01em;
 }
-.type-subtitle{
-  margin:0 0 12px;
-  color:#6b7280;
-  font-size:15px;
-  font-weight:700;
-  letter-spacing:.04em;
-  text-transform:uppercase;
-}
 .type-copy{
   margin:0 0 10px;
-  font-size:22px;
-  line-height:1.5;
+  font-size:24px;
+  line-height:1.45;
   font-weight:800;
   color:#111827;
 }
@@ -471,8 +538,9 @@ render_header('接客タイプ診断', [
 .saved-at{
   margin-top:18px;
   color:#9ca3af;
-  font-size:12px;
+  font-size:11px;
   font-weight:500;
+  letter-spacing:.02em;
   padding-top:14px;
   border-top:1px solid #eef2f7;
 }
@@ -496,6 +564,29 @@ render_header('接客タイプ診断', [
   background:#f8fafc;
   border:1px solid #e8edf5;
 }
+.score-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+.score-value-group{
+  display:grid;
+  justify-items:end;
+  gap:4px;
+}
+.score-side-label{
+  display:inline-flex;
+  align-items:center;
+  min-height:22px;
+  padding:0 8px;
+  border-radius:999px;
+  background:#eef2f7;
+  color:#667085;
+  font-size:11px;
+  font-weight:800;
+  white-space:nowrap;
+}
 .score-item__label{
   font-size:13px;
   color:#6b7280;
@@ -509,23 +600,62 @@ render_header('接客タイプ診断', [
   color:#111827;
   margin-bottom:8px;
 }
+.score-direction{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+  color:#6b7280;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.02em;
+}
+.score-direction span{
+  white-space:nowrap;
+}
 .score-item__sub{
   font-size:13px;
   font-weight:700;
   color:#374151;
-  margin-bottom:14px;
+  margin-top:14px;
 }
 .score-bar{
+  position:relative;
   height:11px;
   border-radius:999px;
   background:#d7dde7;
   overflow:hidden;
 }
+.score-bar-center{
+  position:absolute;
+  left:50%;
+  top:0;
+  width:2px;
+  height:100%;
+  background:#9ca3af;
+  transform:translateX(-50%);
+  z-index:2;
+}
 .score-bar__fill{
+  position:absolute;
+  top:0;
   height:100%;
   border-radius:999px;
-  background:linear-gradient(90deg, #f59e0b 0%, #f97316 50%, #ef4444 100%);
   box-shadow:0 0 0 1px rgba(255,255,255,.22) inset;
+  z-index:1;
+}
+.score-bar__fill.minus{
+  right:50%;
+  background-color:#60a5fa;
+  background-repeat:no-repeat;
+  background-size:100% 100%;
+}
+.score-bar__fill.plus{
+  left:50%;
+  background-color:#f97316;
+  background-repeat:no-repeat;
+  background-size:100% 100%;
 }
 .result-grid{
   display:grid;
@@ -544,7 +674,7 @@ render_header('接客タイプ診断', [
 }
 .today-tip{
   margin:0;
-  line-height:1.9;
+  line-height:2.05;
   font-size:16px;
   font-weight:700;
   color:#7c2d12;
@@ -601,9 +731,14 @@ body[data-theme="dark"] .type-subtitle,
 body[data-theme="dark"] .type-description,
 body[data-theme="dark"] .saved-at,
 body[data-theme="dark"] .score-item__label,
+body[data-theme="dark"] .score-direction,
 body[data-theme="dark"] .score-item__sub,
 body[data-theme="dark"] .result-list li{
   color:rgba(230,223,240,.82);
+}
+body[data-theme="dark"] .score-side-label{
+  background:rgba(255,255,255,.10);
+  color:rgba(230,223,240,.88);
 }
 body[data-theme="dark"] .serviceQuizQuestion__body,
 body[data-theme="dark"] .serviceQuizTitle,
@@ -617,6 +752,7 @@ body[data-theme="dark"] .today-tip{
 }
 body[data-theme="dark"] .serviceQuizChoice__key{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.14)}
 body[data-theme="dark"] .score-bar{background:rgba(255,255,255,.14)}
+body[data-theme="dark"] .score-bar-center{background:rgba(255,255,255,.36)}
 @media (max-width: 960px){
   .result-hero{grid-template-columns:1fr}
   .score-grid{grid-template-columns:repeat(2, 1fr)}
