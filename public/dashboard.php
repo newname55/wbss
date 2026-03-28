@@ -221,10 +221,6 @@ if (!function_exists('render_dashboard_message_summary')) {
         <div class="message-summary-card__title">未読メッセージ</div>
         <div class="message-summary-card__count"><?= (int)$unreadCount ?> 件</div>
         <div class="message-summary-card__desc">自分宛の業務連絡を確認します。</div>
-        <div class="message-summary-card__links">
-          <span>一覧を見る</span>
-          <span>送信する</span>
-        </div>
       </a>
 
       <article class="message-summary-card is-thanks">
@@ -246,10 +242,6 @@ if (!function_exists('render_dashboard_message_summary')) {
         <?php else: ?>
           <div class="message-summary-card__desc">最近のありがとうはまだ届いていません。</div>
         <?php endif; ?>
-        <div class="message-summary-card__links">
-          <a class="message-summary-card__linkBtn" href="<?= h(dashboard_link('/wbss/public/thanks.php', $storeId)) ?>">一覧を見る</a>
-          <a class="message-summary-card__linkBtn" href="<?= h(dashboard_link('/wbss/public/thanks.php', $storeId)) ?>">ありがとうを送る</a>
-        </div>
       </article>
     </section>
     <?php if ($showAllStoreMapScreen): ?>
@@ -1379,19 +1371,6 @@ render_page_start('ダッシュボード');
   line-height:1.4;
 }
 
-.dashboard-side-stack .message-summary-card__links{
-  margin-top:7px;
-  font-size:9px;
-  gap:3px;
-  flex-direction:column;
-  align-items:flex-start;
-}
-
-.dashboard-side-stack .message-summary-card__links span{
-  min-height:22px;
-  padding:0 6px;
-}
-
 .dashboard-side-stack .message-summary-card__thanks-list{
   gap:3px;
   margin-top:5px;
@@ -1487,38 +1466,6 @@ render_page_start('ダッシュボード');
   font-size:10px;
   line-height:1.4;
   color:var(--muted);
-}
-
-.message-summary-card__links{
-  display:flex;
-  gap:6px;
-  flex-wrap:wrap;
-  margin-top:8px;
-  font-size:10px;
-  font-weight:900;
-}
-
-.message-summary-card__links span,
-.message-summary-card__linkBtn{
-  display:inline-flex;
-  align-items:center;
-  min-height:24px;
-  padding:0 7px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(255,255,255,.04);
-}
-
-.message-summary-card__linkBtn{
-  display:inline-flex;
-  align-items:center;
-  min-height:28px;
-  padding:0 8px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(255,255,255,.04);
-  color:inherit;
-  text-decoration:none;
 }
 
 .message-summary-card__thanks-list{
@@ -1865,6 +1812,182 @@ render_page_start('ダッシュボード');
 
 }
 
+@media (max-width: 1200px){
+  .dashboard-shell{
+    max-width:1180px;
+    padding-bottom:20px;
+  }
+
+  .dashboard-topbar{
+    gap:10px;
+    margin-top:8px;
+    margin-bottom:10px;
+  }
+
+  .dashboard-hero-main,
+  .dash-section,
+  .dashboard-focus{
+    border-radius:18px;
+  }
+
+  .dashboard-hero-main{
+    padding:16px 18px;
+    min-height:132px;
+  }
+
+  .dashboard-hero-grid{
+    gap:12px;
+    grid-template-columns:minmax(0, 1.6fr) minmax(200px, .56fr);
+  }
+
+  .hero-store-name{
+    font-size:30px;
+  }
+
+  .hero-store-meta{
+    margin-top:4px;
+    margin-bottom:8px;
+    font-size:11px;
+  }
+
+  .hero-badge{
+    padding:5px 9px;
+    font-size:11px;
+  }
+
+  .dashboard-hero-main h1{
+    margin:8px 0 6px;
+    font-size:22px;
+    line-height:1.16;
+  }
+
+  .dashboard-hero-main p{
+    font-size:12px;
+    line-height:1.42;
+  }
+
+  .dashboard-side-stack{
+    gap:8px;
+  }
+
+  .dashboard-message-strip{
+    margin-bottom:8px;
+  }
+
+  .dashboard-focus{
+    margin-bottom:8px;
+    padding:12px 14px 13px;
+  }
+
+  .dashboard-focus__head h2{
+    font-size:16px;
+  }
+
+  .dashboard-focus__head p{
+    margin-top:3px;
+    font-size:11px;
+  }
+
+  .dashboard-focus__grid{
+    gap:8px;
+    margin-top:10px;
+  }
+
+  .focus-card{
+    gap:10px;
+    padding:11px 12px;
+    border-radius:15px;
+  }
+
+  .focus-card__icon{
+    font-size:22px;
+  }
+
+  .focus-card__title{
+    font-size:14px;
+  }
+
+  .focus-card__desc{
+    font-size:11px;
+    line-height:1.35;
+  }
+
+  .dash-wrap{
+    gap:8px;
+  }
+
+  .dash-tabs{
+    gap:6px;
+    padding:3px;
+    border-radius:16px;
+  }
+
+  .dash-tab{
+    min-height:48px;
+    padding:10px 14px;
+    border-radius:12px;
+    font-size:14px;
+  }
+
+  .dash-section{
+    padding:13px 14px 14px;
+  }
+
+  .dash-section-head{
+    margin-bottom:8px;
+  }
+
+  .dash-section-head h2{
+    font-size:16px;
+  }
+
+  .dash-section-head p{
+    margin-top:3px;
+    font-size:11px;
+  }
+
+  .dash-subsections{
+    gap:10px;
+  }
+
+  .dash-subsection{
+    gap:6px;
+  }
+
+  .dash-grid{
+    gap:8px;
+  }
+
+  .dash-card{
+    padding:10px 11px;
+    border-radius:13px;
+  }
+
+  .dash-card-top{
+    margin-bottom:6px;
+  }
+
+  .dash-icon{
+    font-size:20px;
+  }
+
+  .dash-tag{
+    padding:3px 6px;
+    font-size:9px;
+  }
+
+  .dash-title{
+    font-size:13px;
+    line-height:1.25;
+  }
+
+  .dash-desc{
+    margin-top:3px;
+    font-size:10px;
+    line-height:1.32;
+  }
+}
+
 @media (max-width: 820px){
   .dashboard-topbar{
     grid-template-columns:1fr;
@@ -2023,12 +2146,6 @@ render_page_start('ダッシュボード');
     margin-top:3px;
     font-size:9px;
     line-height:1.3;
-  }
-
-  .dashboard-side-stack .message-summary-card__links{
-    margin-top:5px;
-    font-size:9px;
-    gap:3px;
   }
 
   .push-optin-card__actions{
@@ -2237,12 +2354,6 @@ render_page_start('ダッシュボード');
     font-size:8px;
     line-height:1.25;
   }
-
-.dashboard-side-stack .message-summary-card__links span,
-.dashboard-side-stack .message-summary-card__linkBtn{
-  min-height:18px;
-  padding:0 4px;
-}
 
 .dashboard-side-stack .dashboard-side-feature-card{
   gap:6px;
