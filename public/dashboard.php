@@ -813,7 +813,7 @@ render_page_start('ダッシュボード');
                   <?php endforeach; ?>
                 </select>
                 </div>
-                <div class="store-switch-help">この店舗が、在庫や顧客など他の画面でも使われます。</div>
+               
               </div>
             </form>
             <?php endif; ?>
@@ -1871,120 +1871,194 @@ render_page_start('ダッシュボード');
   }
 
   .dashboard-message-strip{
-    margin-bottom:8px;
-  }
-
-  .dashboard-focus{
-    margin-bottom:8px;
-    padding:12px 14px 13px;
-  }
-
-  .dashboard-focus__head h2{
-    font-size:16px;
-  }
-
-  .dashboard-focus__head p{
-    margin-top:3px;
-    font-size:11px;
-  }
-
-  .dashboard-focus__grid{
-    gap:8px;
-    margin-top:10px;
-  }
-
-  .focus-card{
-    gap:10px;
-    padding:11px 12px;
-    border-radius:15px;
-  }
-
-  .focus-card__icon{
-    font-size:22px;
-  }
-
-  .focus-card__title{
-    font-size:14px;
-  }
-
-  .focus-card__desc{
-    font-size:11px;
-    line-height:1.35;
-  }
-
-  .dash-wrap{
-    gap:8px;
-  }
-
-  .dash-tabs{
-    gap:6px;
-    padding:3px;
-    border-radius:16px;
-  }
-
-  .dash-tab{
-    min-height:48px;
-    padding:10px 14px;
-    border-radius:12px;
-    font-size:14px;
-  }
-
-  .dash-section{
-    padding:13px 14px 14px;
-  }
-
-  .dash-section-head{
-    margin-bottom:8px;
-  }
-
-  .dash-section-head h2{
-    font-size:16px;
-  }
-
-  .dash-section-head p{
-    margin-top:3px;
-    font-size:11px;
-  }
-
-  .dash-subsections{
-    gap:10px;
-  }
-
-  .dash-subsection{
-    gap:6px;
-  }
-
-  .dash-grid{
-    gap:8px;
-  }
-
-  .dash-card{
-    padding:10px 11px;
-    border-radius:13px;
-  }
-
-  .dash-card-top{
+    gap:5px;
     margin-bottom:6px;
   }
 
-  .dash-icon{
-    font-size:20px;
+  .dashboard-side-stack .message-summary-card{
+    padding:6px 6px 7px;
+    border-radius:11px;
   }
 
-  .dash-tag{
-    padding:3px 6px;
+  .dashboard-side-stack .message-summary-card__icon{
+    font-size:13px;
+  }
+
+  .dashboard-side-stack .message-summary-card__title{
+    margin-top:2px;
+    font-size:10px;
+  }
+
+  .dashboard-side-stack .message-summary-card__count{
+    margin-top:1px;
+    font-size:15px;
+  }
+
+  .dashboard-side-stack .message-summary-card__meta{
+    margin-top:1px;
+    font-size:7px;
+  }
+
+  .dashboard-side-stack .message-summary-card__desc{
+    margin-top:1px;
+    font-size:7px;
+    line-height:1.15;
+  }
+
+  .dashboard-side-stack .message-summary-card__thanks-list{
+    gap:2px;
+    margin-top:4px;
+  }
+
+  .dashboard-side-stack .message-summary-card__thanks-item{
+    padding:4px 5px;
+    border-radius:8px;
+  }
+
+  .dashboard-side-stack .message-summary-card__thanks-item strong{
     font-size:9px;
   }
 
-  .dash-title{
+  .dashboard-side-stack .message-summary-card__thanks-item span{
+    font-size:7px;
+  }
+
+  .dashboard-side-stack .dashboard-side-feature-card{
+    gap:4px;
+    padding:7px 6px;
+    border-radius:11px;
+  }
+
+  .dashboard-side-stack .dashboard-side-feature-card__icon{
     font-size:13px;
-    line-height:1.25;
+  }
+
+  .dashboard-side-stack .dashboard-side-feature-card__pill{
+    min-height:17px;
+    padding:0 5px;
+    font-size:7px;
+  }
+
+  .dashboard-side-stack .dashboard-side-feature-card__title{
+    font-size:9px;
+  }
+
+  .dashboard-side-stack .dashboard-side-feature-card__desc{
+    font-size:7px;
+    line-height:1.15;
+  }
+
+  .dashboard-focus{
+    margin-bottom:6px;
+    padding:9px 10px 10px;
+  }
+
+  .dashboard-focus__head h2{
+    font-size:14px;
+  }
+
+  .dashboard-focus__head p{
+    margin-top:2px;
+    font-size:9px;
+  }
+
+  .dashboard-focus__grid{
+    gap:6px;
+    margin-top:6px;
+  }
+
+  .focus-card{
+    gap:8px;
+    padding:8px 9px;
+    border-radius:12px;
+  }
+
+  .focus-card__icon{
+    font-size:18px;
+  }
+
+  .focus-card__title{
+    font-size:11px;
+  }
+
+  .focus-card__desc{
+    font-size:8px;
+    line-height:1.15;
+  }
+
+  .dash-wrap{
+    gap:6px;
+  }
+
+  .dash-tabs{
+    gap:4px;
+    padding:2px;
+    border-radius:14px;
+  }
+
+  .dash-tab{
+    min-height:40px;
+    padding:7px 11px;
+    border-radius:10px;
+    font-size:12px;
+  }
+
+  .dash-section{
+    padding:10px 11px 11px;
+  }
+
+  .dash-section-head{
+    margin-bottom:6px;
+  }
+
+  .dash-section-head h2{
+    font-size:14px;
+  }
+
+  .dash-section-head p{
+    margin-top:2px;
+    font-size:9px;
+  }
+
+  .dash-subsections{
+    gap:8px;
+  }
+
+  .dash-subsection{
+    gap:5px;
+  }
+
+  .dash-grid{
+    gap:6px;
+  }
+
+  .dash-card{
+    padding:7px 8px 8px;
+    border-radius:11px;
+  }
+
+  .dash-card-top{
+    margin-bottom:4px;
+  }
+
+  .dash-icon{
+    font-size:16px;
+  }
+
+  .dash-tag{
+    padding:2px 5px;
+    font-size:7px;
+  }
+
+  .dash-title{
+    font-size:11px;
+    line-height:1.15;
   }
 
   .dash-desc{
-    margin-top:3px;
-    font-size:10px;
-    line-height:1.32;
+    margin-top:2px;
+    font-size:8px;
+    line-height:1.12;
   }
 }
 
