@@ -244,15 +244,18 @@ render_header('接客タイプ診断', [
               <?php $talkScore = (int)$resultView['talk_score']; ?>
               <div class="score-header">
                 <span class="score-item__label">会話</span>
-                <span class="score-item__value"><?= $talkScore ?></span>
+                <div class="score-value-group">
+                  <span class="score-side-label"><?= $talkScore < 0 ? '受容寄り' : ($talkScore > 0 ? '主導寄り' : '中間') ?></span>
+                  <span class="score-item__value"><?= abs($talkScore) ?></span>
+                </div>
               </div>
               <div class="score-direction"><span>← 受容</span><span>主導 →</span></div>
-              <div class="score-bar">
-                <div class="score-bar-center"></div>
+                <div class="score-bar">
+                  <div class="score-bar-center"></div>
                 <?php if ($talkScore < 0): ?>
-                  <div class="score-bar-fill minus" style="width: <?= min(50, max(0, (abs($talkScore) / 10) * 50)) ?>%;"></div>
+                  <div class="score-bar-fill minus" style="width: <?= min(50, max(0, (abs($talkScore) / 10) * 50)) ?>%; background: linear-gradient(90deg, #93c5fd 0%, #60a5fa 100%);"></div>
                 <?php elseif ($talkScore > 0): ?>
-                  <div class="score-bar-fill plus" style="width: <?= min(50, max(0, ($talkScore / 10) * 50)) ?>%;"></div>
+                  <div class="score-bar-fill plus" style="width: <?= min(50, max(0, ($talkScore / 10) * 50)) ?>%; background: var(--result-bar-fill, linear-gradient(90deg, #f59e0b 0%, #f97316 50%, #ef4444 100%));"></div>
                 <?php endif; ?>
               </div>
               <div class="score-item__sub"><?= h($resultView['talk_label']) ?></div>
@@ -261,15 +264,18 @@ render_header('接客タイプ診断', [
               <?php $moodScore = (int)$resultView['mood_score']; ?>
               <div class="score-header">
                 <span class="score-item__label">空気</span>
-                <span class="score-item__value"><?= $moodScore ?></span>
+                <div class="score-value-group">
+                  <span class="score-side-label"><?= $moodScore < 0 ? '安心寄り' : ($moodScore > 0 ? '盛り上げ寄り' : '中間') ?></span>
+                  <span class="score-item__value"><?= abs($moodScore) ?></span>
+                </div>
               </div>
               <div class="score-direction"><span>← 安心</span><span>盛り上げ →</span></div>
               <div class="score-bar">
                 <div class="score-bar-center"></div>
                 <?php if ($moodScore < 0): ?>
-                  <div class="score-bar-fill minus" style="width: <?= min(50, max(0, (abs($moodScore) / 10) * 50)) ?>%;"></div>
+                  <div class="score-bar-fill minus" style="width: <?= min(50, max(0, (abs($moodScore) / 10) * 50)) ?>%; background: linear-gradient(90deg, #93c5fd 0%, #60a5fa 100%);"></div>
                 <?php elseif ($moodScore > 0): ?>
-                  <div class="score-bar-fill plus" style="width: <?= min(50, max(0, ($moodScore / 10) * 50)) ?>%;"></div>
+                  <div class="score-bar-fill plus" style="width: <?= min(50, max(0, ($moodScore / 10) * 50)) ?>%; background: var(--result-bar-fill, linear-gradient(90deg, #f59e0b 0%, #f97316 50%, #ef4444 100%));"></div>
                 <?php endif; ?>
               </div>
               <div class="score-item__sub"><?= h($resultView['mood_label']) ?></div>
@@ -278,15 +284,18 @@ render_header('接客タイプ診断', [
               <?php $responseScore = (int)$resultView['response_score']; ?>
               <div class="score-header">
                 <span class="score-item__label">反応</span>
-                <span class="score-item__value"><?= $responseScore ?></span>
+                <div class="score-value-group">
+                  <span class="score-side-label"><?= $responseScore < 0 ? '観察寄り' : ($responseScore > 0 ? '直感寄り' : '中間') ?></span>
+                  <span class="score-item__value"><?= abs($responseScore) ?></span>
+                </div>
               </div>
               <div class="score-direction"><span>← 観察</span><span>直感 →</span></div>
               <div class="score-bar">
                 <div class="score-bar-center"></div>
                 <?php if ($responseScore < 0): ?>
-                  <div class="score-bar-fill minus" style="width: <?= min(50, max(0, (abs($responseScore) / 10) * 50)) ?>%;"></div>
+                  <div class="score-bar-fill minus" style="width: <?= min(50, max(0, (abs($responseScore) / 10) * 50)) ?>%; background: linear-gradient(90deg, #93c5fd 0%, #60a5fa 100%);"></div>
                 <?php elseif ($responseScore > 0): ?>
-                  <div class="score-bar-fill plus" style="width: <?= min(50, max(0, ($responseScore / 10) * 50)) ?>%;"></div>
+                  <div class="score-bar-fill plus" style="width: <?= min(50, max(0, ($responseScore / 10) * 50)) ?>%; background: var(--result-bar-fill, linear-gradient(90deg, #f59e0b 0%, #f97316 50%, #ef4444 100%));"></div>
                 <?php endif; ?>
               </div>
               <div class="score-item__sub"><?= h($resultView['response_label']) ?></div>
@@ -295,15 +304,18 @@ render_header('接客タイプ診断', [
               <?php $relationScore = (int)$resultView['relation_score']; ?>
               <div class="score-header">
                 <span class="score-item__label">関係性</span>
-                <span class="score-item__value"><?= $relationScore ?></span>
+                <div class="score-value-group">
+                  <span class="score-side-label"><?= $relationScore < 0 ? '信頼寄り' : ($relationScore > 0 ? '恋愛演出寄り' : '中間') ?></span>
+                  <span class="score-item__value"><?= abs($relationScore) ?></span>
+                </div>
               </div>
               <div class="score-direction"><span>← 信頼</span><span>恋愛演出 →</span></div>
               <div class="score-bar">
                 <div class="score-bar-center"></div>
                 <?php if ($relationScore < 0): ?>
-                  <div class="score-bar-fill minus" style="width: <?= min(50, max(0, (abs($relationScore) / 10) * 50)) ?>%;"></div>
+                  <div class="score-bar-fill minus" style="width: <?= min(50, max(0, (abs($relationScore) / 10) * 50)) ?>%; background: linear-gradient(90deg, #93c5fd 0%, #60a5fa 100%);"></div>
                 <?php elseif ($relationScore > 0): ?>
-                  <div class="score-bar-fill plus" style="width: <?= min(50, max(0, ($relationScore / 10) * 50)) ?>%;"></div>
+                  <div class="score-bar-fill plus" style="width: <?= min(50, max(0, ($relationScore / 10) * 50)) ?>%; background: var(--result-bar-fill, linear-gradient(90deg, #f59e0b 0%, #f97316 50%, #ef4444 100%));"></div>
                 <?php endif; ?>
               </div>
               <div class="score-item__sub"><?= h($resultView['relation_label']) ?></div>
@@ -549,6 +561,23 @@ render_header('接客タイプ診断', [
   justify-content:space-between;
   gap:10px;
 }
+.score-value-group{
+  display:grid;
+  justify-items:end;
+  gap:4px;
+}
+.score-side-label{
+  display:inline-flex;
+  align-items:center;
+  min-height:22px;
+  padding:0 8px;
+  border-radius:999px;
+  background:#eef2f7;
+  color:#667085;
+  font-size:11px;
+  font-weight:800;
+  white-space:nowrap;
+}
 .score-item__label{
   font-size:13px;
   color:#6b7280;
@@ -692,6 +721,10 @@ body[data-theme="dark"] .score-direction,
 body[data-theme="dark"] .score-item__sub,
 body[data-theme="dark"] .result-list li{
   color:rgba(230,223,240,.82);
+}
+body[data-theme="dark"] .score-side-label{
+  background:rgba(255,255,255,.10);
+  color:rgba(230,223,240,.88);
 }
 body[data-theme="dark"] .serviceQuizQuestion__body,
 body[data-theme="dark"] .serviceQuizTitle,
