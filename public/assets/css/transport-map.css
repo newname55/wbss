@@ -187,20 +187,20 @@
 .transportMapScreenMetric{
   display:inline-flex;
   align-items:baseline;
-  gap:4px;
-  min-height:18px;
-  padding:0 2px;
+  gap:3px;
+  min-height:16px;
+  padding:0 1px;
   color:#334155;
 }
 
 .transportMapScreenMetricLabel{
-  font-size:9px;
+  font-size:8px;
   color:#64748b;
   font-weight:700;
 }
 
 .transportMapScreenMetricValue{
-  font-size:13px;
+  font-size:12px;
   line-height:1;
   color:#0f172a;
 }
@@ -229,22 +229,32 @@
 }
 
 .transportMapCanvas--screen{
-  min-height:0;
-  height:100%;
+  min-height:52vh;
+  height:52vh;
+}
+
+.transportMapScreenTop[hidden] + .transportMapScreenCanvas .transportMapCanvas--screen{
+  min-height:calc(100dvh - 170px);
+  height:calc(100dvh - 170px);
+}
+
+.transportMapScreenTop:not([hidden]) + .transportMapScreenCanvas .transportMapCanvas--screen{
+  min-height:calc(100dvh - 350px);
+  height:calc(100dvh - 350px);
 }
 
 .transportMapScreenFooter{
   align-self:start;
-  padding:4px 8px 5px;
+  padding:3px 7px 4px;
   display:grid;
-  gap:3px;
+  gap:2px;
   border-radius:12px;
 }
 
 .transportMapScreenFooterRow{
   display:grid;
   grid-template-columns:minmax(0, 1fr) auto;
-  gap:6px;
+  gap:5px;
   align-items:start;
 }
 
@@ -261,13 +271,13 @@
 
 .transportMapScreenPage .transportMapChip{
   padding:2px 5px;
-  font-size:9px;
+  font-size:8px;
   background:rgba(255,255,255,.52);
   border-color:rgba(15,23,42,.07);
 }
 
 .transportMapScreenPage .transportMapChip b{
-  font-size:9px;
+  font-size:8px;
 }
 
 .transportMapScreenPage .transportMapMiniHint{
@@ -1057,13 +1067,13 @@
 
 .transportMapFootNote{
   color:var(--muted);
-  font-size:12px;
+  font-size:10px;
 }
 
 .transportMapEmpty,
 .transportMapEmptyInline{
   color:var(--muted);
-  font-size:13px;
+  font-size:11px;
 }
 
 .transportMapEmpty{
@@ -1621,6 +1631,17 @@ body[data-theme="staff"] .transportMapDriverToggle{
   }
 
   .transportMapCanvas--screen{
-    min-height:68vh;
+    min-height:58vh;
+    height:58vh;
+  }
+
+  .transportMapScreenTop[hidden] + .transportMapScreenCanvas .transportMapCanvas--screen{
+    min-height:calc(100dvh - 150px);
+    height:calc(100dvh - 150px);
+  }
+
+  .transportMapScreenTop:not([hidden]) + .transportMapScreenCanvas .transportMapCanvas--screen{
+    min-height:calc(100dvh - 320px);
+    height:calc(100dvh - 320px);
   }
 }
