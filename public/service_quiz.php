@@ -24,6 +24,7 @@ $error = '';
 $saveNotice = '';
 $latestResult = null;
 $displayResult = null;
+$cumulativeSummary = null;
 $resultId = (int)($_GET['result_id'] ?? 0);
 $isQuestionMode = ((string)($_GET['start'] ?? '') === '1');
 $currentAnswers = [];
@@ -104,6 +105,10 @@ if ($displayResult === null && $tableReady) {
   }
 } elseif ($displayResult === null) {
   $latestResult = null;
+}
+
+if (is_array($displayResult) && service_quiz_history_tables_ready($pdo)) {
+  $cumulativeSummary = service_quiz_fetch_cumulative_summary($pdo, $storeId, $userId, 20);
 }
 
 if ((string)($_GET['saved'] ?? '') === '1') {
@@ -229,6 +234,16 @@ render_header('接客タイプ診断', [
         $theme = $typeThemes[$resultView['type']] ?? $typeThemes['all_rounder'];
         $minusBar = 'linear-gradient(90deg, #93c5fd 0%, #60a5fa 100%)';
         $imagePath = '/wbss/public/images/cast_type_images/' . rawurlencode($resultView['type']) . '.png';
+        $averageScores = is_array($cumulativeSummary['average_scores'] ?? null) ? $cumulativeSummary['average_scores'] : [];
+        $categoryCounts = is_array($cumulativeSummary['category_counts'] ?? null) ? $cumulativeSummary['category_counts'] : [];
+        arsort($categoryCounts);
+        $topCategories = array_slice($categoryCounts, 0, 3, true);
+        $cumulativeAxes = [
+          'talk_axis' => ['title' => '会話', 'left' => '受容', 'right' => '主導', 'positive' => '主導強め', 'neutral' => '中間', 'negative' => '受容強め'],
+          'mood_axis' => ['title' => '空気', 'left' => '安心', 'right' => '盛り上げ', 'positive' => '盛り上げ強め', 'neutral' => '中間', 'negative' => '安心強め'],
+          'response_axis' => ['title' => '反応', 'left' => '観察', 'right' => '直感', 'positive' => '直感強め', 'neutral' => '中間', 'negative' => '観察強め'],
+          'relation_axis' => ['title' => '関係性', 'left' => '信頼', 'right' => '恋愛演出', 'positive' => '恋愛演出強め', 'neutral' => '中間', 'negative' => '信頼蓄積強め'],
+        ];
       ?>
       <div class="cast-type-result-page" style="--result-tip-bg: <?= h($theme['tip_bg']) ?>; --result-tip-border: <?= h($theme['tip_border']) ?>;">
         <?php if ($saveNotice !== ''): ?>
@@ -387,9 +402,69 @@ render_header('接客タイプ診断', [
           </div>
         </section>
 
+        <?php if (is_array($cumulativeSummary) && (int)($cumulativeSummary['session_count'] ?? 0) > 0): ?>
+          <section class="card-panel cumulative-panel">
+            <div class="cumulative-panel__head">
+              <div>
+                <div class="cumulative-panel__badge">累積傾向</div>
+                <h3>最近の接客スタイルの積み上がり</h3>
+                <p class="cumulative-panel__lead">直近 <?= (int)$cumulativeSummary['session_count'] ?> 回分の平均から、今の安定した傾向をまとめています。</p>
+              </div>
+            </div>
+
+            <div class="cumulative-grid">
+              <?php foreach ($cumulativeAxes as $axisKey => $axisMeta): ?>
+                <?php
+                  $averageValue = (float)($averageScores[$axisKey] ?? 0.0);
+                  $roundedAverage = (int)round($averageValue);
+                  $directionLabel = $roundedAverage < 0
+                    ? $axisMeta['left'] . '寄り'
+                    : ($roundedAverage > 0 ? $axisMeta['right'] . '寄り' : '中間');
+                  $bucketLabel = service_quiz_axis_bucket($roundedAverage, $axisMeta['positive'], $axisMeta['neutral'], $axisMeta['negative']);
+                  $fillWidth = min(50.0, max(0.0, (abs($averageValue) / 10) * 50));
+                  $formattedAverage = number_format(abs($averageValue), 1);
+                ?>
+                <div class="cumulative-item">
+                  <div class="cumulative-item__top">
+                    <span class="cumulative-item__title"><?= h($axisMeta['title']) ?></span>
+                    <span class="cumulative-item__value"><?= h($formattedAverage) ?></span>
+                  </div>
+                  <div class="score-direction cumulative-item__direction"><span>← <?= h($axisMeta['left']) ?></span><span><?= h($axisMeta['right']) ?> →</span></div>
+                  <div class="score-bar cumulative-item__bar">
+                    <div class="score-bar-center"></div>
+                    <?php if ($averageValue < 0): ?>
+                      <div class="score-bar__fill minus" style="width: <?= $fillWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
+                    <?php elseif ($averageValue > 0): ?>
+                      <div class="score-bar__fill plus" style="width: <?= $fillWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
+                    <?php endif; ?>
+                  </div>
+                  <div class="cumulative-item__meta">
+                    <span><?= h($directionLabel) ?></span>
+                    <span><?= h($bucketLabel) ?></span>
+                  </div>
+                </div>
+              <?php endforeach; ?>
+            </div>
+
+            <div class="cumulative-panel__categories">
+              <h4>よく出ている接客シーン</h4>
+              <?php if ($topCategories): ?>
+                <div class="cumulative-tags">
+                  <?php foreach ($topCategories as $categoryKey => $count): ?>
+                    <span><?= h((string)($categoryLabels[$categoryKey]['label'] ?? $categoryKey)) ?> × <?= (int)$count ?></span>
+                  <?php endforeach; ?>
+                </div>
+              <?php else: ?>
+                <p class="cumulative-panel__empty">履歴がたまると、接客シーンごとの偏りもここに表示されます。</p>
+              <?php endif; ?>
+            </div>
+          </section>
+        <?php endif; ?>
+
         <div class="result-actions">
-          <a href="/wbss/public/dashboard_cast.php" class="btn btn-primary">ダッシュボードへ戻る</a>
           <a href="/wbss/public/service_quiz.php?start=1" class="btn btn-secondary">もう一度診断する</a>
+          <a href="/wbss/public/dashboard_cast.php" class="btn btn-primary">ダッシュボードへ戻る</a>
+
         </div>
       </div>
 
@@ -711,6 +786,118 @@ render_header('接客タイプ診断', [
   gap:14px;
   flex-wrap:wrap;
 }
+.cumulative-panel{
+  margin-bottom:28px;
+}
+.cumulative-panel__head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:18px;
+}
+.cumulative-panel__badge{
+  display:inline-flex;
+  align-items:center;
+  min-height:30px;
+  padding:0 10px;
+  border-radius:999px;
+  background:rgba(17,24,39,.04);
+  border:1px solid #e2e8f0;
+  color:#596275;
+  font-size:12px;
+  font-weight:800;
+  margin-bottom:10px;
+}
+.cumulative-panel h3{
+  margin:0;
+  font-size:22px;
+  font-weight:800;
+}
+.cumulative-panel__lead{
+  margin:8px 0 0;
+  color:#6b7280;
+  font-size:14px;
+  line-height:1.8;
+}
+.cumulative-grid{
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:16px;
+}
+.cumulative-item{
+  padding:18px 16px;
+  border-radius:20px;
+  background:#f8fafc;
+  border:1px solid #e8edf5;
+}
+.cumulative-item__top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.cumulative-item__title{
+  font-size:14px;
+  font-weight:800;
+  color:#374151;
+}
+.cumulative-item__value{
+  font-size:24px;
+  line-height:1;
+  font-weight:900;
+  color:#111827;
+}
+.cumulative-item__direction{
+  margin-bottom:10px;
+}
+.cumulative-item__bar{
+  margin-bottom:12px;
+}
+.cumulative-item__meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:#4b5563;
+  font-size:13px;
+  font-weight:700;
+}
+.cumulative-panel__categories{
+  margin-top:20px;
+  padding-top:20px;
+  border-top:1px solid #edf2f7;
+}
+.cumulative-panel__categories h4{
+  margin:0 0 12px;
+  font-size:16px;
+  font-weight:800;
+  color:#1f2937;
+}
+.cumulative-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.cumulative-tags span{
+  display:inline-flex;
+  align-items:center;
+  min-height:34px;
+  padding:0 12px;
+  border-radius:999px;
+  background:#f4f7fb;
+  border:1px solid #dfe7f1;
+  color:#374151;
+  font-size:13px;
+  font-weight:800;
+}
+.cumulative-panel__empty{
+  margin:0;
+  color:#6b7280;
+  font-size:14px;
+  line-height:1.7;
+}
 .serviceQuizIntro__chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 .serviceQuizIntro__chips span,.serviceQuizLatest{
   border:1px solid var(--line);background:rgba(255,255,255,.68);border-radius:16px
@@ -732,6 +919,12 @@ body[data-theme="dark"] .result-notice{
     linear-gradient(180deg, rgba(38,43,61,.96), rgba(44,50,71,.94));
 }
 body[data-theme="dark"] .score-item{
+  background:rgba(255,255,255,.08);
+  border-color:rgba(255,255,255,.12);
+}
+body[data-theme="dark"] .cumulative-item,
+body[data-theme="dark"] .cumulative-tags span,
+body[data-theme="dark"] .cumulative-panel__badge{
   background:rgba(255,255,255,.08);
   border-color:rgba(255,255,255,.12);
 }
@@ -774,16 +967,28 @@ body[data-theme="dark"] .cast-type-result-header h1,
 body[data-theme="dark"] .type-title,
 body[data-theme="dark"] .type-copy,
 body[data-theme="dark"] .score-item__value,
+body[data-theme="dark"] .cumulative-panel h3,
+body[data-theme="dark"] .cumulative-panel__categories h4,
+body[data-theme="dark"] .cumulative-item__title,
+body[data-theme="dark"] .cumulative-item__value,
 body[data-theme="dark"] .today-tip{
   color:#fff8fc;
+}
+body[data-theme="dark"] .cumulative-item__meta,
+body[data-theme="dark"] .cumulative-panel__lead,
+body[data-theme="dark"] .cumulative-panel__empty,
+body[data-theme="dark"] .cumulative-tags span{
+  color:rgba(230,223,240,.82);
 }
 body[data-theme="dark"] .serviceQuizChoice__key{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.14)}
 body[data-theme="dark"] .score-bar{background:rgba(255,255,255,.14)}
 body[data-theme="dark"] .score-bar-center{background:rgba(255,255,255,.36)}
+body[data-theme="dark"] .cumulative-panel__categories{border-top-color:rgba(255,255,255,.10)}
 @media (max-width: 960px){
   .result-hero{grid-template-columns:1fr}
   .score-grid{grid-template-columns:repeat(2, 1fr)}
   .result-grid{grid-template-columns:1fr}
+  .cumulative-grid{grid-template-columns:1fr}
   .type-title{font-size:34px}
 }
 @media (max-width: 640px){
