@@ -17,10 +17,20 @@ function service_training_recent_mission_ids(int $limit = 5): array {
   if (!is_array($rows)) {
     return [];
   }
-  return array_slice(array_values(array_filter(array_map('strval', $rows))), -max(1, $limit));
+  $ids = [];
+  foreach (array_slice($rows, -max(1, $limit)) as $row) {
+    if (is_array($row) && trim((string)($row['id'] ?? '')) !== '') {
+      $ids[] = (string)$row['id'];
+      continue;
+    }
+    if (is_string($row) && trim($row) !== '') {
+      $ids[] = trim($row);
+    }
+  }
+  return $ids;
 }
 
-function service_training_push_recent_mission_id(string $missionId): void {
+function service_training_push_recent_mission_id(string $missionId, ?string $date = null): void {
   if ($missionId === '') {
     return;
   }
@@ -31,11 +41,42 @@ function service_training_push_recent_mission_id(string $missionId): void {
   if (!is_array($rows)) {
     $rows = [];
   }
-  $rows[] = $missionId;
+  $rows[] = [
+    'id' => $missionId,
+    'date' => $date ?: date('Y-m-d'),
+  ];
   if (count($rows) > 10) {
     $rows = array_slice($rows, -10);
   }
   $_SESSION[SERVICE_TRAINING_MISSION_RECENT_KEY] = array_values($rows);
+}
+
+function service_training_mission_used_recently(string $missionId, int $recentDays): bool {
+  if ($missionId === '' || $recentDays <= 0) {
+    return false;
+  }
+  if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+  }
+  $rows = $_SESSION[SERVICE_TRAINING_MISSION_RECENT_KEY] ?? [];
+  if (!is_array($rows) || !$rows) {
+    return false;
+  }
+
+  $cutoff = strtotime('-' . max(1, $recentDays) . ' days');
+  foreach (array_reverse($rows) as $row) {
+    if (!is_array($row)) {
+      continue;
+    }
+    if ((string)($row['id'] ?? '') !== $missionId) {
+      continue;
+    }
+    $date = strtotime((string)($row['date'] ?? ''));
+    if ($date !== false && $date >= $cutoff) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function service_training_generate_mission(
@@ -56,11 +97,12 @@ function service_training_generate_mission(
     }
 
     $score = 0;
-    $missionId = (string)($mission['mission_id'] ?? '');
+    $missionId = (string)($mission['id'] ?? $mission['mission_id'] ?? '');
     $category = (string)($mission['category'] ?? '');
     $skillTag = (string)($mission['skill_tag'] ?? '');
-    $difficulty = (string)($mission['difficulty'] ?? 'medium');
-    $targetTypes = array_values(array_map('strval', (array)($mission['target_types'] ?? [])));
+    $difficulty = (int)($mission['difficulty'] ?? 2);
+    $targetTypes = array_values(array_map('strval', (array)($mission['recommended_for_types'] ?? $mission['target_types'] ?? [])));
+    $avoidRecentDays = (int)($mission['avoid_if_recent_days'] ?? 0);
 
     if (in_array($typeKey, $targetTypes, true)) {
       $score += 32;
@@ -71,13 +113,16 @@ function service_training_generate_mission(
     if (isset($weakSkillTags[$skillTag])) {
       $score += 14 + ((int)$weakSkillTags[$skillTag] * 6);
     }
-    if ($difficulty === 'low') {
+    if ($difficulty <= 1) {
       $score += 12;
-    } elseif ($difficulty === 'medium') {
+    } elseif ($difficulty === 2) {
       $score += 6;
     }
     if (in_array($missionId, $recentMissionIds, true)) {
       $score -= 28;
+    }
+    if (service_training_mission_used_recently($missionId, $avoidRecentDays)) {
+      $score -= 40;
     }
 
     $score += random_int(0, 4);
@@ -125,7 +170,7 @@ function service_training_resolve_today_mission(
   );
 
   if ($mission) {
-    service_training_push_recent_mission_id((string)($mission['mission_id'] ?? ''));
+    service_training_push_recent_mission_id((string)($mission['id'] ?? $mission['mission_id'] ?? ''), $dateKey);
   }
 
   $_SESSION[SERVICE_TRAINING_MISSION_SESSION_KEY] = [
