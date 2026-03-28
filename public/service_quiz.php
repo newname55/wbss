@@ -255,10 +255,10 @@ render_header('接客タイプ診断', [
                   <div class="score-bar-center"></div>
                 <?php if ($talkScore < 0): ?>
                   <?php $talkWidth = min(50.0, max(4.0, (abs($talkScore) / 10) * 50)); ?>
-                  <div class="score-bar-fill minus" style="width: <?= $talkWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
+                  <div class="score-bar__fill minus" style="width: <?= $talkWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
                 <?php elseif ($talkScore > 0): ?>
                   <?php $talkWidth = min(50.0, max(4.0, ($talkScore / 10) * 50)); ?>
-                  <div class="score-bar-fill plus" style="width: <?= $talkWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
+                  <div class="score-bar__fill plus" style="width: <?= $talkWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
                 <?php endif; ?>
               </div>
               <div class="score-item__sub"><?= h($resultView['talk_label']) ?></div>
@@ -277,10 +277,10 @@ render_header('接客タイプ診断', [
                 <div class="score-bar-center"></div>
                 <?php if ($moodScore < 0): ?>
                   <?php $moodWidth = min(50.0, max(4.0, (abs($moodScore) / 10) * 50)); ?>
-                  <div class="score-bar-fill minus" style="width: <?= $moodWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
+                  <div class="score-bar__fill minus" style="width: <?= $moodWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
                 <?php elseif ($moodScore > 0): ?>
                   <?php $moodWidth = min(50.0, max(4.0, ($moodScore / 10) * 50)); ?>
-                  <div class="score-bar-fill plus" style="width: <?= $moodWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
+                  <div class="score-bar__fill plus" style="width: <?= $moodWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
                 <?php endif; ?>
               </div>
               <div class="score-item__sub"><?= h($resultView['mood_label']) ?></div>
@@ -299,10 +299,10 @@ render_header('接客タイプ診断', [
                 <div class="score-bar-center"></div>
                 <?php if ($responseScore < 0): ?>
                   <?php $responseWidth = min(50.0, max(4.0, (abs($responseScore) / 10) * 50)); ?>
-                  <div class="score-bar-fill minus" style="width: <?= $responseWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
+                  <div class="score-bar__fill minus" style="width: <?= $responseWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
                 <?php elseif ($responseScore > 0): ?>
                   <?php $responseWidth = min(50.0, max(4.0, ($responseScore / 10) * 50)); ?>
-                  <div class="score-bar-fill plus" style="width: <?= $responseWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
+                  <div class="score-bar__fill plus" style="width: <?= $responseWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
                 <?php endif; ?>
               </div>
               <div class="score-item__sub"><?= h($resultView['response_label']) ?></div>
@@ -321,10 +321,10 @@ render_header('接客タイプ診断', [
                 <div class="score-bar-center"></div>
                 <?php if ($relationScore < 0): ?>
                   <?php $relationWidth = min(50.0, max(4.0, (abs($relationScore) / 10) * 50)); ?>
-                  <div class="score-bar-fill minus" style="width: <?= $relationWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
+                  <div class="score-bar__fill minus" style="width: <?= $relationWidth ?>%; background-image: <?= h($minusBar) ?>;"></div>
                 <?php elseif ($relationScore > 0): ?>
                   <?php $relationWidth = min(50.0, max(4.0, ($relationScore / 10) * 50)); ?>
-                  <div class="score-bar-fill plus" style="width: <?= $relationWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
+                  <div class="score-bar__fill plus" style="width: <?= $relationWidth ?>%; background-image: <?= h($theme['bar']) ?>;"></div>
                 <?php endif; ?>
               </div>
               <div class="score-item__sub"><?= h($resultView['relation_label']) ?></div>
