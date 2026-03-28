@@ -282,16 +282,24 @@ render_header('WBSS', [
       <input type="hidden" id="store_id" value="<?= (int)$storeId ?>">
     </section>
 
-    <a class="card cast-diagnosis" href="/wbss/public/service_quiz.php">
-      <div class="cast-diagnosis__head">
-        <div>
-          <div class="cast-sectionTitle">🪞 接客タイプ診断</div>
-          <div class="cast-sectionSub">12問の4択で、今の接客傾向を4軸から見える化します。</div>
+    <details class="card cast-diagnosis" open data-diagnosis-card>
+      <summary class="cast-diagnosis__summaryRow">
+        <div class="cast-diagnosis__head">
+          <div>
+            <div class="cast-sectionTitle">🪞 接客タイプ診断</div>
+            <div class="cast-sectionSub">12問の4択で、今の接客傾向を4軸から見える化します。</div>
+          </div>
+          <div class="cast-diagnosis__headSide">
+            <?php if ($serviceQuizLatest): ?>
+              <div class="cast-diagnosis__peek"><?= h((string)((array)($serviceQuizLatest['result_type'] ?? [])['name'] ?? '診断結果')) ?></div>
+            <?php endif; ?>
+            <span class="cast-badge <?= $serviceQuizLatest ? 'is-diagnosis' : '' ?>">
+              <?= $serviceQuizLatest ? '最新結果あり' : '未診断' ?>
+            </span>
+            <span class="cast-diagnosis__toggleHint">タップで<?= $serviceQuizLatest ? '開く' : '確認' ?></span>
+          </div>
         </div>
-        <span class="cast-badge <?= $serviceQuizLatest ? 'is-diagnosis' : '' ?>">
-          <?= $serviceQuizLatest ? '最新結果あり' : '未診断' ?>
-        </span>
-      </div>
+      </summary>
 
       <?php if ($serviceQuizLatest): ?>
         <?php
@@ -317,7 +325,11 @@ render_header('WBSS', [
           まだ診断結果がありません。最初の1回を受けると、最新タイプをここに表示できます。
         </div>
       <?php endif; ?>
-    </a>
+
+      <div class="cast-diagnosis__footer">
+        <a class="cast-diagnosis__link" href="/wbss/public/service_quiz.php">接客タイプ診断を開く</a>
+      </div>
+    </details>
 
     <div class="card-grid cast-grid">
       <a class="card big cast-navCard cast-navCard--diagnosis" href="/wbss/public/service_quiz.php">
@@ -410,11 +422,26 @@ render_header('WBSS', [
   display:grid;gap:14px;padding:18px;text-decoration:none;color:inherit;
   background:linear-gradient(180deg, rgba(255,255,255,.86), rgba(255,246,251,.88))
 }
+.cast-diagnosis[open]{padding-bottom:18px}
+.cast-diagnosis__summaryRow{
+  list-style:none;
+  cursor:pointer;
+}
+.cast-diagnosis__summaryRow::-webkit-details-marker{display:none}
 .cast-diagnosis__head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.cast-diagnosis__headSide{display:flex;align-items:flex-end;gap:8px;flex-direction:column}
+.cast-diagnosis__peek{font-size:13px;font-weight:1000;color:color-mix(in srgb, var(--txt) 86%, var(--accent))}
+.cast-diagnosis__toggleHint{display:none;font-size:11px;font-weight:900;color:var(--muted)}
 .cast-diagnosis__body{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(250px,.8fr);gap:14px;align-items:start}
 .cast-diagnosis__type{font-size:24px;font-weight:1000;line-height:1.2}
 .cast-diagnosis__summary{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.75}
 .cast-diagnosis__tip{margin-top:12px;font-size:12px;font-weight:900;color:color-mix(in srgb, var(--txt) 84%, var(--accent))}
+.cast-diagnosis__footer{display:flex;justify-content:flex-end}
+.cast-diagnosis__link{
+  display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;
+  border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.74);
+  font-size:12px;font-weight:1000;color:var(--txt);text-decoration:none
+}
 .cast-diagnosis__axes{display:grid;gap:8px}
 .cast-diagnosis__axes span,.cast-diagnosis__empty{
   display:block;padding:12px 13px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.68);
@@ -568,12 +595,15 @@ body[data-theme="dark"] .cast-status__info span{
 }
 body[data-theme="dark"] .cast-diagnosis__type,
 body[data-theme="dark"] .cast-diagnosis__tip,
-body[data-theme="dark"] .cast-diagnosis__axes span{
+body[data-theme="dark"] .cast-diagnosis__axes span,
+body[data-theme="dark"] .cast-diagnosis__peek,
+body[data-theme="dark"] .cast-diagnosis__link{
   color:#fff7fb;
 }
 body[data-theme="dark"] .cast-diagnosis__axes span,
 body[data-theme="dark"] .cast-diagnosis__empty,
-body[data-theme="dark"] .cast-badge.is-diagnosis{
+body[data-theme="dark"] .cast-badge.is-diagnosis,
+body[data-theme="dark"] .cast-diagnosis__link{
   background: rgba(255,255,255,.08);
   border-color: rgba(255,255,255,.10);
 }
@@ -716,6 +746,24 @@ body[data-theme="staff"] .cast-hero{background:
     opacity:.94;
   }
   .cast-navCard{min-height:140px;padding:16px}
+  .cast-diagnosis{gap:10px;padding:14px}
+  .cast-diagnosis__summaryRow{margin:-14px;padding:14px}
+  .cast-diagnosis__head{align-items:center}
+  .cast-diagnosis__headSide{align-items:flex-end}
+  .cast-diagnosis__peek{font-size:12px}
+  .cast-diagnosis__toggleHint{display:block}
+  .cast-diagnosis__body{grid-template-columns:1fr;gap:10px}
+  .cast-diagnosis__type{font-size:18px}
+  .cast-diagnosis__summary{font-size:12px;line-height:1.6}
+  .cast-diagnosis__tip{margin-top:8px;font-size:11px}
+  .cast-diagnosis__axes{grid-template-columns:1fr 1fr;gap:8px}
+  .cast-diagnosis__axes span,.cast-diagnosis__empty{padding:10px 11px;font-size:11px}
+  .cast-diagnosis__footer{justify-content:stretch}
+  .cast-diagnosis__link{width:100%}
+  .cast-diagnosis:not([open]){gap:0;padding-bottom:14px}
+  .cast-diagnosis:not([open]) .cast-diagnosis__body,
+  .cast-diagnosis:not([open]) .cast-diagnosis__empty,
+  .cast-diagnosis:not([open]) .cast-diagnosis__footer{display:none}
 }
 @media (max-width:390px){
   .cast-message-stack,.card-grid{grid-template-columns:1fr}
@@ -723,6 +771,25 @@ body[data-theme="staff"] .cast-hero{background:
 </style>
 
 <script>
+(() => {
+  const details = document.querySelector('[data-diagnosis-card]');
+  if (!details) return;
+  const mq = window.matchMedia('(max-width: 520px)');
+  const sync = () => {
+    if (mq.matches) {
+      details.removeAttribute('open');
+      return;
+    }
+    details.setAttribute('open', 'open');
+  };
+  sync();
+  if (typeof mq.addEventListener === 'function') {
+    mq.addEventListener('change', sync);
+  } else if (typeof mq.addListener === 'function') {
+    mq.addListener(sync);
+  }
+})();
+
 async function geoReq(action){
   const msg = document.getElementById('geoMsg');
   msg.textContent = 'LINEに送信中…';
