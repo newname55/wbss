@@ -21,7 +21,8 @@ function service_quiz_question(
   string $question,
   string $type,
   array $choices,
-  ?string $prompt = null
+  ?string $prompt = null,
+  array $axisFocus = []
 ): array {
   $item = [
     'id' => $id,
@@ -30,6 +31,7 @@ function service_quiz_question(
     'question' => $question,
     'type' => $type,
     'choices' => $choices,
+    'axis_focus' => array_values($axisFocus),
   ];
   if ($prompt !== null) {
     $item['prompt'] = $prompt;
@@ -218,6 +220,102 @@ function service_quiz_questions(): array {
       service_quiz_choice('C', 'また話したいと思える安心感を残す', -1, -1, -1, -2),
       service_quiz_choice('D', '印象に残る一言で締める', 2, 2, 2, 1),
     ]),
+    service_quiz_question(25, 'love_talk', 'L5', 'お客様に「そういうこと言われると、ちょっと期待しちゃうんだけど」と言われた。', 'customer_quote', [
+      service_quiz_choice('A', 'え、そうやって言うのちょっとずるいかも', 1, 1, 2, 2),
+      service_quiz_choice('B', '期待しすぎると危ないよ？と軽く笑って流す', 2, 1, 1, 2),
+      service_quiz_choice('C', 'うれしいけど、落ち着いて話せる感じも好きだよ', -1, -1, -1, -2),
+      service_quiz_choice('D', 'どういうところでそう思ったの？', 0, 0, -2, -1),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['relation_axis', 'response_axis']),
+    service_quiz_question(26, 'tired_customer', 'T5', 'お客様が「今日はほんと頭が回らない」と苦笑いしている。', 'customer_quote', [
+      service_quiz_choice('A', 'じゃあ今日は考えなくていい時間にしよう', -1, -2, -1, -2),
+      service_quiz_choice('B', 'それ相当疲れてるね、最近忙しい？', -1, -1, -2, -1),
+      service_quiz_choice('C', '逆にそんな日に来てくれたのちょっとうれしい', 1, 1, 1, 2),
+      service_quiz_choice('D', 'よし、今日は軽い話だけして帰そ', 2, 1, 1, 0),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['mood_axis', 'response_axis']),
+    service_quiz_question(27, 'first_contact', 'F4', '初対面のお客様で、第一印象は少し堅め。', 'situation', [
+      service_quiz_choice('A', 'まずは相手の反応を見ながら、質問を少しずつ入れる', -1, -1, -2, -1),
+      service_quiz_choice('B', '最初に明るく一声かけて、空気を軽くする', 2, 2, 1, 0),
+      service_quiz_choice('C', 'やわらかいトーンで、安心できる雰囲気を作る', -2, -2, -1, -2),
+      service_quiz_choice('D', '少し印象に残る一言を入れて、最初に存在感を出す', 1, 1, 1, 2),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['talk_axis', 'mood_axis']),
+    service_quiz_question(28, 'first_contact', 'F5', '初対面で「どんな人なんだろう」と見られている感じがある。', 'situation', [
+      service_quiz_choice('A', '自分のことを少し話して、距離を作りやすくする', 2, 1, 1, 0),
+      service_quiz_choice('B', '相手の話しやすい話題を探って、先に受ける', -1, -1, -2, -1),
+      service_quiz_choice('C', '安心して話せそうと思ってもらえる表情や返しを意識する', -1, -2, -1, -2),
+      service_quiz_choice('D', '少しだけ特別感のある空気を混ぜる', 0, 1, 1, 2),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['talk_axis', 'relation_axis']),
+    service_quiz_question(29, 'high_tension', 'H4', 'テンションの高いお客様が、どんどん自分のペースで話してくる。', 'customer_state', [
+      service_quiz_choice('A', '同じ熱量で返して、一緒に盛り上がる', 2, 2, 2, 1),
+      service_quiz_choice('B', '一度受け止めつつ、要所だけ強くリアクションする', 0, 0, -2, -1),
+      service_quiz_choice('C', 'テンションは合わせすぎず、聞きやすい流れに整える', -1, -2, -1, -2),
+      service_quiz_choice('D', '相手のテンションの裏にある“本音”を少し探る', -1, -1, -2, -1),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['mood_axis', 'response_axis']),
+    service_quiz_question(30, 'high_tension', 'H5', '団体席で、周りも含めて盛り上がっている。', 'situation', [
+      service_quiz_choice('A', '全体に声をかけて場の中心に入る', 2, 2, 1, 0),
+      service_quiz_choice('B', '一人ずつ反応を拾って、置いていかれる人を作らない', -1, 0, -2, -1),
+      service_quiz_choice('C', '盛り上がりの中でも安心していられる空気を作る', -1, -2, -1, -2),
+      service_quiz_choice('D', 'その中で一人にだけ少し印象を残す動きをする', 1, 1, 1, 2),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['talk_axis', 'relation_axis']),
+    service_quiz_question(31, 'nomination', 'N4', '「また来たい」と思ってもらえそうな手応えがある。', 'situation', [
+      service_quiz_choice('A', '今日話した内容の中で、相手らしさを言葉にして返す', -1, -1, -2, -2),
+      service_quiz_choice('B', '少しだけ“また会いたい”と思わせる言い方を入れる', 0, 1, 1, 2),
+      service_quiz_choice('C', '安心して戻ってこられる空気を最後まで保つ', -2, -2, -1, -2),
+      service_quiz_choice('D', '印象に残る一言を置いて終わる', 2, 1, 1, 1),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['relation_axis']),
+    service_quiz_question(32, 'nomination', 'N5', '指名につなげたいが、露骨すぎる空気にはしたくない。', 'situation', [
+      service_quiz_choice('A', 'また話せたらうれしいと自然に伝える', -1, -1, -1, -2),
+      service_quiz_choice('B', '次来たら今日の続き聞かせてと余白を残す', 0, 0, -1, -2),
+      service_quiz_choice('C', '今日ちょっと特別に楽しかったと印象を残す', 1, 1, 1, 2),
+      service_quiz_choice('D', '次はもっと面白くするよと前向きに引っ張る', 2, 2, 1, 0),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['relation_axis', 'talk_axis']),
+    service_quiz_question(33, 'silence', 'S4', '会話が一度止まって、少し沈黙が流れている。', 'situation', [
+      service_quiz_choice('A', '無理に埋めず、相手の様子を見る', -2, -2, -2, -1),
+      service_quiz_choice('B', '軽く一つ話題を投げて、流れを戻す', 2, 1, 1, 0),
+      service_quiz_choice('C', 'こういう落ち着いた感じも嫌いじゃないと安心感を出す', -1, -2, -1, -2),
+      service_quiz_choice('D', '少しだけ印象に残る言葉で空気を変える', 1, 1, 1, 2),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['talk_axis', 'mood_axis']),
+    service_quiz_question(34, 'silence', 'S5', '沈黙が気まずいというより、“どう広げるか迷う”空気になった。', 'situation', [
+      service_quiz_choice('A', '相手の持ち物やさっきの話題から糸口を探す', -1, -1, -2, -1),
+      service_quiz_choice('B', '自分の話を少し足して流れを作る', 2, 1, 1, 0),
+      service_quiz_choice('C', '落ち着いたままで良いと割り切って、空気を守る', -2, -2, -1, -2),
+      service_quiz_choice('D', '少し踏み込んだ質問をして、空気を前に進める', 1, -1, -2, -1),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['response_axis']),
+    service_quiz_question(35, 'closing', 'C3', '帰り際、お客様が少し名残惜しそうにしている。', 'situation', [
+      service_quiz_choice('A', '今日はありがとう、またゆっくり話したいねと返す', 0, -1, -1, -2),
+      service_quiz_choice('B', '次会うとき、今日よりもっと仲良くなれそうと言う', 1, 1, 1, 2),
+      service_quiz_choice('C', '気をつけて帰ってねと最後までやわらかく締める', -2, -2, -1, -2),
+      service_quiz_choice('D', '次は今日の続きからねと流れを残す', 1, 0, -1, -1),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['relation_axis']),
+    service_quiz_question(36, 'closing', 'C4', '帰り際、短い一言だけで印象を残したい。', 'situation', [
+      service_quiz_choice('A', '安心できる言葉を一つ残す', -1, -2, -1, -2),
+      service_quiz_choice('B', '少し照れるような言い方を入れる', 0, 1, 1, 2),
+      service_quiz_choice('C', '印象に残る短いフレーズで締める', 2, 1, 1, 1),
+      service_quiz_choice('D', '相手の今日の雰囲気に合う言葉を選ぶ', -1, -1, -2, -1),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['relation_axis', 'response_axis']),
+    service_quiz_question(37, 'closing', 'C5', '帰る直前、お客様が「今日は来てよかった」と言った。', 'customer_quote', [
+      service_quiz_choice('A', 'そう思ってもらえてうれしいと素直に返す', -1, -1, -1, -2),
+      service_quiz_choice('B', 'それ言われると、こっちまでうれしくなると距離を寄せる', 0, 1, 1, 2),
+      service_quiz_choice('C', 'またそう思ってもらえるようにするねと前に進める', 2, 1, 1, 0),
+      service_quiz_choice('D', '今日のどこがよかった？と少し掘る', 0, -1, -2, -1),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['relation_axis', 'talk_axis']),
+    service_quiz_question(38, 'quiet_customer', 'Q3', '静かなお客様で、返事はあるが自分から話題は出してこない。', 'customer_state', [
+      service_quiz_choice('A', '短い質問を重ねて、少しずつ開く', -1, -1, -2, -1),
+      service_quiz_choice('B', 'こちらの話を少し増やして流れを作る', 2, 1, 1, 0),
+      service_quiz_choice('C', '沈黙も含めて居心地を優先する', -2, -2, -1, -2),
+      service_quiz_choice('D', '共通点を探して一点突破する', 1, 0, -2, 0),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['talk_axis', 'response_axis']),
+    service_quiz_question(39, 'quiet_customer', 'Q4', '静かな相手だけど、表情はちゃんと反応している。', 'customer_state', [
+      service_quiz_choice('A', '表情を手がかりに、相手が反応しやすい話題を探す', -1, -1, -2, -1),
+      service_quiz_choice('B', '無理に話させようとせず、安心していられる空気を保つ', -2, -2, -1, -2),
+      service_quiz_choice('C', '少しだけテンポを上げて、話しやすくする', 1, 2, 1, 0),
+      service_quiz_choice('D', '軽く印象に残る一言を入れて距離を縮める', 1, 0, 1, 2),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['response_axis', 'mood_axis']),
+    service_quiz_question(40, 'quiet_customer', 'Q5', '静かなお客様で、「この子が話を進めてくれると助かる」と感じる。', 'customer_state', [
+      service_quiz_choice('A', 'こちらで話の流れを作り、相手が入りやすい形にする', 2, 1, 1, 0),
+      service_quiz_choice('B', '質問を細かく切って、相手の負担を減らす', -1, -1, -2, -1),
+      service_quiz_choice('C', 'まず安心して座っていられる空気を作る', -2, -2, -1, -2),
+      service_quiz_choice('D', '少しだけ印象の残る返しを混ぜる', 1, 1, 1, 2),
+    ], 'この場面で、一番“あなたらしい”のはどれ？', ['talk_axis']),
   ];
 }
 
