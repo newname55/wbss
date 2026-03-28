@@ -8,6 +8,7 @@ require_once __DIR__ . '/../app/service_quiz.php';
 
 const SERVICE_TRAINING_SESSION_KEY = '__service_training_run';
 const SERVICE_TRAINING_RESULT_KEY = '__service_training_result';
+const SERVICE_TRAINING_HISTORY_KEY = '__service_training_history';
 
 function service_training_question_map(array $questions): array {
   $map = [];
@@ -173,6 +174,49 @@ function service_training_clear_result(): void {
   unset($_SESSION[SERVICE_TRAINING_RESULT_KEY]);
 }
 
+function service_training_push_history(array $result): void {
+  if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+  }
+  $history = $_SESSION[SERVICE_TRAINING_HISTORY_KEY] ?? [];
+  if (!is_array($history)) {
+    $history = [];
+  }
+  $history[] = [
+    'created_at' => date('Y-m-d H:i:s'),
+    'stretch_points' => array_values((array)($result['stretch_points'] ?? [])),
+    'weak_tags' => array_values((array)($result['weak_tags'] ?? [])),
+  ];
+  if (count($history) > 20) {
+    $history = array_slice($history, -20);
+  }
+  $_SESSION[SERVICE_TRAINING_HISTORY_KEY] = array_values($history);
+}
+
+function service_training_recent_weak_tags(int $limit = 3): array {
+  if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+  }
+  $history = $_SESSION[SERVICE_TRAINING_HISTORY_KEY] ?? [];
+  if (!is_array($history) || !$history) {
+    return [];
+  }
+
+  $tagCounts = [];
+  foreach (array_slice($history, -10) as $row) {
+    foreach ((array)($row['weak_tags'] ?? []) as $tag) {
+      $tag = trim((string)$tag);
+      if ($tag === '') {
+        continue;
+      }
+      $tagCounts[$tag] = (int)($tagCounts[$tag] ?? 0) + 1;
+    }
+  }
+
+  arsort($tagCounts);
+  return array_slice($tagCounts, 0, max(1, $limit), true);
+}
+
 function service_training_rank_meta(string $rank): array {
   $map = [
     'best' => ['label' => 'かなり良い', 'class' => 'is-best'],
@@ -269,6 +313,7 @@ function service_training_calculate_result(array $questions, array $answers, arr
   foreach (array_slice($stretchTags, 0, 3) as $row) {
     $stretchPoints[] = $row['tag'] . 'は、もう一工夫でさらに伸ばせます。';
   }
+  $weakTags = array_map(static fn(array $row): string => (string)$row['tag'], array_slice($stretchTags, 0, 5));
 
   $categoryAverages = [];
   foreach ($categoryTotals as $category => $scoreTotal) {
@@ -299,6 +344,7 @@ function service_training_calculate_result(array $questions, array $answers, arr
     'max_total_score' => max(1, count($answeredRows) * 3),
     'strong_points' => $strongPoints,
     'stretch_points' => $stretchPoints,
+    'weak_tags' => $weakTags,
     'today_tip' => $todayTip,
     'summary' => $summary,
     'focus_skills' => $focusSkills,
@@ -385,6 +431,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
       if (count($currentAnswers) >= count($questions)) {
         $displayResult = service_training_calculate_result($questionsPool, $currentAnswers, $growthTheme, $categoryMeta);
         service_training_store_result($displayResult);
+        service_training_push_history($displayResult);
         service_training_clear_run();
         header('Location: /wbss/public/service_training.php?done=1');
         exit;
@@ -504,6 +551,7 @@ render_header('接客マナートレーニング', [
     <?php
       $bestCategoryKey = (string)($displayResult['best_category'] ?? '');
       $weakCategoryKey = (string)($displayResult['weak_category'] ?? '');
+      $recentWeakTags = service_training_recent_weak_tags(3);
     ?>
     <div class="trainingResultPage">
       <section class="card trainingThemeCard">
@@ -552,6 +600,20 @@ render_header('接客マナートレーニング', [
               <span><?= h((string)$skill) ?></span>
             <?php endforeach; ?>
           </div>
+        </div>
+
+        <div class="card trainingResultCard">
+          <h2>最近よく弱く出る所作</h2>
+          <?php if ($recentWeakTags): ?>
+            <div class="trainingTags trainingTags--weak">
+              <?php foreach ($recentWeakTags as $tag => $count): ?>
+                <span><?= h((string)$tag) ?> × <?= (int)$count ?></span>
+              <?php endforeach; ?>
+            </div>
+            <div class="trainingResultMeta">直近のトレーニングで繰り返し出やすいテーマです。ひとつだけ意識すると伸びやすいです。</div>
+          <?php else: ?>
+            <div class="trainingResultMeta">トレーニングを重ねると、ここに最近の伸びしろがたまっていきます。</div>
+          <?php endif; ?>
         </div>
 
         <div class="card trainingResultCard trainingResultCard--tip">
@@ -608,6 +670,7 @@ render_header('接客マナートレーニング', [
 .trainingTypeChip__value{margin-top:8px;font-size:20px;font-weight:1000;color:#111827}
 .trainingTags{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 .trainingTags span{display:inline-flex;align-items:center;min-height:34px;padding:0 12px;border-radius:999px;background:#f5f7fb;border:1px solid #dde5ef;font-size:12px;font-weight:900;color:#334155}
+.trainingTags--weak span{background:#fff4f4;border-color:#f3d0d0;color:#8b3a3a}
 .trainingProgressCard{margin-top:18px;padding:22px}
 .trainingProgressCard__top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
 .trainingQuestionMeta,.trainingCount,.trainingProgressMeta{color:var(--muted);font-size:12px;font-weight:800}
@@ -687,6 +750,10 @@ body[data-theme="dark"] .trainingTags span{
   background:rgba(255,255,255,.08);
   border-color:rgba(255,255,255,.12);
 }
+body[data-theme="dark"] .trainingTags--weak span{
+  background:rgba(248,113,113,.14);
+  border-color:rgba(248,113,113,.24);
+}
 body[data-theme="dark"] .trainingLead,
 body[data-theme="dark"] .trainingQuestionLabel,
 body[data-theme="dark"] .trainingQuestionMeta,
@@ -762,7 +829,7 @@ body[data-theme="dark"] .trainingFeedback{background:#f8fafc;color:#111827}
 
       window.setTimeout(() => {
         form.submit();
-      }, 1000);
+      }, 1500);
     });
   });
 })();
