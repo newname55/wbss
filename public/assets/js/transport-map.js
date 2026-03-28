@@ -1008,7 +1008,7 @@
       return;
     }
     const itemId = Number(trigger.getAttribute('data-focus-id') || '0');
-    if (itemId > 0) {
+    if (itemId !== 0) {
       focusItem(itemId, false);
     }
   });
@@ -1018,7 +1018,7 @@
       const saveTrigger = event.target && event.target.closest ? event.target.closest('[data-save-assignment]') : null;
       if (saveTrigger) {
         const itemId = Number(saveTrigger.getAttribute('data-save-assignment') || '0');
-        if (itemId > 0) {
+        if (itemId !== 0) {
           saveAssignment(itemId, saveTrigger);
         }
         return;
@@ -1027,7 +1027,7 @@
       const focusTrigger = event.target && event.target.closest ? event.target.closest('[data-focus-row]') : null;
       if (focusTrigger) {
         const itemId = Number(focusTrigger.getAttribute('data-focus-row') || '0');
-        if (itemId > 0) {
+        if (itemId !== 0) {
           focusItem(itemId, true);
         }
         return;
