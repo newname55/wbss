@@ -225,12 +225,9 @@ if (!function_exists('render_dashboard_message_summary')) {
           <span>一覧を見る</span>
           <span>送信する</span>
         </div>
-        <?php if ($showAllStoreMapScreen): ?>
-          <a class="message-summary-card__subaction" href="/wbss/public/transport/map_screen.php?store_id=all">送迎マップTV 全店舗表示</a>
-        <?php endif; ?>
       </a>
 
-      <a class="message-summary-card is-thanks" href="<?= h(dashboard_link('/wbss/public/thanks.php', $storeId)) ?>">
+      <article class="message-summary-card is-thanks">
         <div class="message-summary-card__top">
           <span class="message-summary-card__icon">💐</span>
           <span class="message-summary-card__pill">最近のありがとう</span>
@@ -250,11 +247,21 @@ if (!function_exists('render_dashboard_message_summary')) {
           <div class="message-summary-card__desc">最近のありがとうはまだ届いていません。</div>
         <?php endif; ?>
         <div class="message-summary-card__links">
-          <span>一覧を見る</span>
-          <span>ありがとうを送る</span>
+          <a class="message-summary-card__linkBtn" href="<?= h(dashboard_link('/wbss/public/thanks.php', $storeId)) ?>">一覧を見る</a>
+          <a class="message-summary-card__linkBtn" href="<?= h(dashboard_link('/wbss/public/thanks.php', $storeId)) ?>">ありがとうを送る</a>
         </div>
-      </a>
+      </article>
     </section>
+    <?php if ($showAllStoreMapScreen): ?>
+      <a class="dashboard-side-feature-card" href="/wbss/public/transport/map_screen.php?store_id=all">
+        <div class="dashboard-side-feature-card__top">
+          <span class="dashboard-side-feature-card__icon">🗺️</span>
+          <span class="dashboard-side-feature-card__pill">送迎確認</span>
+        </div>
+        <div class="dashboard-side-feature-card__title">送迎マップ TV を見る</div>
+        <div class="dashboard-side-feature-card__desc">今日の送迎対象、未割当、方面の偏りを全店舗でまとめて確認します。</div>
+      </a>
+    <?php endif; ?>
     <?php
   }
 }
@@ -1491,7 +1498,8 @@ render_page_start('ダッシュボード');
   font-weight:900;
 }
 
-.message-summary-card__links span{
+.message-summary-card__links span,
+.message-summary-card__linkBtn{
   display:inline-flex;
   align-items:center;
   min-height:28px;
@@ -1501,24 +1509,16 @@ render_page_start('ダッシュボード');
   background:rgba(255,255,255,.04);
 }
 
-.message-summary-card__subaction{
+.message-summary-card__linkBtn{
   display:inline-flex;
   align-items:center;
-  justify-content:center;
-  margin-top:10px;
-  min-height:34px;
-  padding:0 12px;
-  border-radius:12px;
-  border:1px solid rgba(96,165,250,.22);
-  background:rgba(96,165,250,.12);
-  color:#dbeafe;
-  font-size:11px;
-  font-weight:900;
+  min-height:28px;
+  padding:0 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+  color:inherit;
   text-decoration:none;
-}
-
-.message-summary-card__subaction:hover{
-  background:rgba(96,165,250,.18);
 }
 
 .message-summary-card__thanks-list{
@@ -1543,6 +1543,61 @@ render_page_start('ダッシュボード');
 .message-summary-card__thanks-item span{
   font-size:10px;
   color:var(--muted);
+}
+
+.dashboard-side-feature-card{
+  display:grid;
+  gap:7px;
+  padding:11px 10px 12px;
+  border:1px solid rgba(245,158,11,.28);
+  border-radius:16px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,248,235,.94));
+  box-shadow:0 10px 24px rgba(0,0,0,.10);
+  color:inherit;
+  text-decoration:none;
+}
+
+.dashboard-side-feature-card:hover{
+  transform:translateY(-1px);
+  box-shadow:0 14px 28px rgba(0,0,0,.12);
+}
+
+.dashboard-side-feature-card__top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+
+.dashboard-side-feature-card__icon{
+  font-size:16px;
+}
+
+.dashboard-side-feature-card__pill{
+  display:inline-flex;
+  align-items:center;
+  min-height:22px;
+  padding:0 7px;
+  border-radius:999px;
+  border:1px solid rgba(245,158,11,.20);
+  background:rgba(245,158,11,.10);
+  color:#9a3412;
+  font-size:9px;
+  font-weight:900;
+}
+
+.dashboard-side-feature-card__title{
+  color:#0f172a;
+  font-size:12px;
+  font-weight:900;
+  line-height:1.35;
+}
+
+.dashboard-side-feature-card__desc{
+  color:#6b7280;
+  font-size:9px;
+  line-height:1.45;
 }
 
 .btn-micro{
@@ -2174,10 +2229,29 @@ render_page_start('ダッシュボード');
     font-size:9px;
   }
 
-  .dashboard-side-stack .message-summary-card__links span{
-    min-height:20px;
-    padding:0 5px;
-  }
+.dashboard-side-stack .message-summary-card__links span,
+.dashboard-side-stack .message-summary-card__linkBtn{
+  min-height:20px;
+  padding:0 5px;
+}
+
+.dashboard-side-stack .dashboard-side-feature-card{
+  gap:6px;
+  padding:10px 9px 11px;
+  border-radius:14px;
+}
+
+.dashboard-side-stack .dashboard-side-feature-card__icon{
+  font-size:15px;
+}
+
+.dashboard-side-stack .dashboard-side-feature-card__title{
+  font-size:12px;
+}
+
+.dashboard-side-stack .dashboard-side-feature-card__desc{
+  font-size:9px;
+}
 
 }
 </style>
