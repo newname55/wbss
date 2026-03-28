@@ -250,14 +250,18 @@ if (!function_exists('render_dashboard_message_summary')) {
           <a class="message-summary-card__linkBtn" href="<?= h(dashboard_link('/wbss/public/thanks.php', $storeId)) ?>">一覧を見る</a>
           <a class="message-summary-card__linkBtn" href="<?= h(dashboard_link('/wbss/public/thanks.php', $storeId)) ?>">ありがとうを送る</a>
         </div>
-        <?php if ($showAllStoreMapScreen): ?>
-          <a class="message-summary-card__subaction" href="/wbss/public/transport/map_screen.php?store_id=all">
-            <span class="message-summary-card__subactionKicker">Transport TV</span>
-            <span class="message-summary-card__subactionTitle">送迎マップ TV を全店舗で開く</span>
-          </a>
-        <?php endif; ?>
       </article>
     </section>
+    <?php if ($showAllStoreMapScreen): ?>
+      <a class="dashboard-side-feature-card" href="/wbss/public/transport/map_screen.php?store_id=all">
+        <div class="dashboard-side-feature-card__top">
+          <span class="dashboard-side-feature-card__icon">🗺️</span>
+          <span class="dashboard-side-feature-card__pill">送迎確認</span>
+        </div>
+        <div class="dashboard-side-feature-card__title">送迎マップ TV を見る</div>
+        <div class="dashboard-side-feature-card__desc">今日の送迎対象、未割当、方面の偏りを全店舗でまとめて確認します。</div>
+      </a>
+    <?php endif; ?>
     <?php
   }
 }
@@ -1517,44 +1521,6 @@ render_page_start('ダッシュボード');
   text-decoration:none;
 }
 
-.message-summary-card__subaction{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-  gap:3px;
-  margin-top:10px;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid rgba(245,158,11,.20);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06)),
-    rgba(245,158,11,.08);
-  color:#f8fafc;
-  text-decoration:none;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
-}
-
-.message-summary-card__subaction:hover{
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08)),
-    rgba(245,158,11,.12);
-}
-
-.message-summary-card__subactionKicker{
-  color:rgba(255,248,235,.74);
-  font-size:9px;
-  font-weight:900;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-}
-
-.message-summary-card__subactionTitle{
-  color:#fff7ed;
-  font-size:12px;
-  font-weight:900;
-  line-height:1.35;
-}
-
 .message-summary-card__thanks-list{
   display:grid;
   gap:6px;
@@ -1577,6 +1543,61 @@ render_page_start('ダッシュボード');
 .message-summary-card__thanks-item span{
   font-size:10px;
   color:var(--muted);
+}
+
+.dashboard-side-feature-card{
+  display:grid;
+  gap:7px;
+  padding:11px 10px 12px;
+  border:1px solid rgba(245,158,11,.28);
+  border-radius:16px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,248,235,.94));
+  box-shadow:0 10px 24px rgba(0,0,0,.10);
+  color:inherit;
+  text-decoration:none;
+}
+
+.dashboard-side-feature-card:hover{
+  transform:translateY(-1px);
+  box-shadow:0 14px 28px rgba(0,0,0,.12);
+}
+
+.dashboard-side-feature-card__top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+
+.dashboard-side-feature-card__icon{
+  font-size:16px;
+}
+
+.dashboard-side-feature-card__pill{
+  display:inline-flex;
+  align-items:center;
+  min-height:22px;
+  padding:0 7px;
+  border-radius:999px;
+  border:1px solid rgba(245,158,11,.20);
+  background:rgba(245,158,11,.10);
+  color:#9a3412;
+  font-size:9px;
+  font-weight:900;
+}
+
+.dashboard-side-feature-card__title{
+  color:#0f172a;
+  font-size:12px;
+  font-weight:900;
+  line-height:1.35;
+}
+
+.dashboard-side-feature-card__desc{
+  color:#6b7280;
+  font-size:9px;
+  line-height:1.45;
 }
 
 .btn-micro{
@@ -2214,18 +2235,22 @@ render_page_start('ダッシュボード');
   padding:0 5px;
 }
 
-.dashboard-side-stack .message-summary-card__subaction{
-  margin-top:7px;
-  padding:8px 10px;
-  border-radius:12px;
+.dashboard-side-stack .dashboard-side-feature-card{
+  gap:6px;
+  padding:10px 9px 11px;
+  border-radius:14px;
 }
 
-.dashboard-side-stack .message-summary-card__subactionKicker{
-  font-size:8px;
+.dashboard-side-stack .dashboard-side-feature-card__icon{
+  font-size:15px;
 }
 
-.dashboard-side-stack .message-summary-card__subactionTitle{
-  font-size:10px;
+.dashboard-side-stack .dashboard-side-feature-card__title{
+  font-size:12px;
+}
+
+.dashboard-side-stack .dashboard-side-feature-card__desc{
+  font-size:9px;
 }
 
 }
