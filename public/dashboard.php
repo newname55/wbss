@@ -227,7 +227,7 @@ if (!function_exists('render_dashboard_message_summary')) {
         </div>
       </a>
 
-      <a class="message-summary-card is-thanks" href="<?= h(dashboard_link('/wbss/public/thanks.php', $storeId)) ?>">
+      <article class="message-summary-card is-thanks">
         <div class="message-summary-card__top">
           <span class="message-summary-card__icon">💐</span>
           <span class="message-summary-card__pill">最近のありがとう</span>
@@ -247,13 +247,16 @@ if (!function_exists('render_dashboard_message_summary')) {
           <div class="message-summary-card__desc">最近のありがとうはまだ届いていません。</div>
         <?php endif; ?>
         <div class="message-summary-card__links">
-          <span>一覧を見る</span>
-          <span>ありがとうを送る</span>
+          <a class="message-summary-card__linkBtn" href="<?= h(dashboard_link('/wbss/public/thanks.php', $storeId)) ?>">一覧を見る</a>
+          <a class="message-summary-card__linkBtn" href="<?= h(dashboard_link('/wbss/public/thanks.php', $storeId)) ?>">ありがとうを送る</a>
         </div>
         <?php if ($showAllStoreMapScreen): ?>
-          <a class="message-summary-card__subaction" href="/wbss/public/transport/map_screen.php?store_id=all">送迎マップTV 全店舗表示</a>
+          <a class="message-summary-card__subaction" href="/wbss/public/transport/map_screen.php?store_id=all">
+            <span class="message-summary-card__subactionKicker">Transport TV</span>
+            <span class="message-summary-card__subactionTitle">送迎マップ TV を全店舗で開く</span>
+          </a>
         <?php endif; ?>
-      </a>
+      </article>
     </section>
     <?php
   }
@@ -1491,7 +1494,8 @@ render_page_start('ダッシュボード');
   font-weight:900;
 }
 
-.message-summary-card__links span{
+.message-summary-card__links span,
+.message-summary-card__linkBtn{
   display:inline-flex;
   align-items:center;
   min-height:28px;
@@ -1501,24 +1505,54 @@ render_page_start('ダッシュボード');
   background:rgba(255,255,255,.04);
 }
 
-.message-summary-card__subaction{
+.message-summary-card__linkBtn{
   display:inline-flex;
   align-items:center;
-  justify-content:center;
-  margin-top:10px;
-  min-height:34px;
-  padding:0 12px;
-  border-radius:12px;
-  border:1px solid rgba(96,165,250,.22);
-  background:rgba(96,165,250,.12);
-  color:#dbeafe;
-  font-size:11px;
-  font-weight:900;
+  min-height:28px;
+  padding:0 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+  color:inherit;
   text-decoration:none;
 }
 
+.message-summary-card__subaction{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:3px;
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(245,158,11,.20);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06)),
+    rgba(245,158,11,.08);
+  color:#f8fafc;
+  text-decoration:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+}
+
 .message-summary-card__subaction:hover{
-  background:rgba(96,165,250,.18);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08)),
+    rgba(245,158,11,.12);
+}
+
+.message-summary-card__subactionKicker{
+  color:rgba(255,248,235,.74);
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.message-summary-card__subactionTitle{
+  color:#fff7ed;
+  font-size:12px;
+  font-weight:900;
+  line-height:1.35;
 }
 
 .message-summary-card__thanks-list{
@@ -2174,10 +2208,25 @@ render_page_start('ダッシュボード');
     font-size:9px;
   }
 
-  .dashboard-side-stack .message-summary-card__links span{
-    min-height:20px;
-    padding:0 5px;
-  }
+.dashboard-side-stack .message-summary-card__links span,
+.dashboard-side-stack .message-summary-card__linkBtn{
+  min-height:20px;
+  padding:0 5px;
+}
+
+.dashboard-side-stack .message-summary-card__subaction{
+  margin-top:7px;
+  padding:8px 10px;
+  border-radius:12px;
+}
+
+.dashboard-side-stack .message-summary-card__subactionKicker{
+  font-size:8px;
+}
+
+.dashboard-side-stack .message-summary-card__subactionTitle{
+  font-size:10px;
+}
 
 }
 </style>
