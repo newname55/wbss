@@ -207,7 +207,7 @@ if (!function_exists('render_dashboard_focus_actions')) {
 }
 
 if (!function_exists('render_dashboard_message_summary')) {
-  function render_dashboard_message_summary(array $summary, int $storeId): void {
+  function render_dashboard_message_summary(array $summary, int $storeId, bool $showAllStoreMapScreen = false): void {
     $recentThanks = $summary['recent_thanks'] ?? [];
     $unreadCount = (int)($summary['unread_count'] ?? 0);
     $monthlyThanksCount = (int)($summary['monthly_thanks_count'] ?? 0);
@@ -225,6 +225,9 @@ if (!function_exists('render_dashboard_message_summary')) {
           <span>一覧を見る</span>
           <span>送信する</span>
         </div>
+        <?php if ($showAllStoreMapScreen): ?>
+          <a class="message-summary-card__subaction" href="/wbss/public/transport/map_screen.php?store_id=all">送迎マップTV 全店舗表示</a>
+        <?php endif; ?>
       </a>
 
       <a class="message-summary-card is-thanks" href="<?= h(dashboard_link('/wbss/public/thanks.php', $storeId)) ?>">
@@ -862,7 +865,7 @@ render_page_start('ダッシュボード');
       </div>
 
       <div class="dashboard-side-stack">
-        <?php render_dashboard_message_summary($messageSummary, $storeId); ?>
+        <?php render_dashboard_message_summary($messageSummary, $storeId, $canViewAllStoreShift); ?>
       </div>
     </section>
 
@@ -1496,6 +1499,26 @@ render_page_start('ダッシュボード');
   border-radius:999px;
   border:1px solid rgba(255,255,255,.10);
   background:rgba(255,255,255,.04);
+}
+
+.message-summary-card__subaction{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-top:10px;
+  min-height:34px;
+  padding:0 12px;
+  border-radius:12px;
+  border:1px solid rgba(96,165,250,.22);
+  background:rgba(96,165,250,.12);
+  color:#dbeafe;
+  font-size:11px;
+  font-weight:900;
+  text-decoration:none;
+}
+
+.message-summary-card__subaction:hover{
+  background:rgba(96,165,250,.18);
 }
 
 .message-summary-card__thanks-list{
