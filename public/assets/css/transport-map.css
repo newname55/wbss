@@ -13,13 +13,14 @@
 
 .transportMapScreenPage{
   display:grid;
-  grid-template-rows:auto auto minmax(0, 1fr) auto;
+  grid-template-rows:auto minmax(0, 1fr) auto;
   gap:8px;
   padding-bottom:0;
   width:min(100%, 1680px);
   max-width:none;
   margin:0 auto;
   min-height:calc(100vh - 20px);
+  position:relative;
 }
 
 .admin-wrap.transportMapScreenPage{
@@ -34,6 +35,8 @@
   justify-content:space-between;
   gap:10px;
   padding:2px 2px 0;
+  position:relative;
+  z-index:1202;
 }
 
 .transportMapScreenTopBarMain{
@@ -75,13 +78,21 @@
 }
 
 .transportMapScreenTop{
+  position:absolute;
+  top:56px;
+  left:0;
+  right:0;
+  z-index:1201;
   width:100%;
+  max-width:100%;
   padding:6px 8px;
   display:grid;
   gap:6px;
   border-radius:12px;
   background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(248,250,252,.88));
   box-shadow:0 8px 22px rgba(15,18,34,.08);
+  border:1px solid rgba(15,23,42,.08);
+  backdrop-filter:blur(8px);
 }
 
 .transportMapScreenMenuBtn{
@@ -212,11 +223,13 @@
 
 .transportMapScreenCanvas{
   position:relative;
+  z-index:1;
   padding:4px;
   display:grid;
   align-content:stretch;
   gap:0;
   min-height:0;
+  overflow:hidden;
 }
 
 .transportMapCanvas--screen{
@@ -1526,6 +1539,10 @@ body[data-theme="staff"] .transportMapDriverToggle{
   .transportMapScreenTopBar{
     flex-direction:column;
     align-items:flex-start;
+  }
+
+  .transportMapScreenTop{
+    top:78px;
   }
 
   .transportMapScreenQuickActions{
