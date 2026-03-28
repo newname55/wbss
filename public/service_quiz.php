@@ -192,9 +192,20 @@ render_header('接客タイプ診断', [
           'matches' => (array)($type['best_customers'] ?? []),
           'today_tip' => (string)($type['today_tip'] ?? ''),
         ];
+        $typeThemes = [
+          'calm_empath' => ['bar' => 'linear-gradient(90deg, #f5a8c8 0%, #ef7cae 100%)', 'tip_bg' => 'linear-gradient(180deg, #fff1f7 0%, #fff8fb 100%)', 'tip_border' => '#f2bfd5'],
+          'soft_healer' => ['bar' => 'linear-gradient(90deg, #7bdcb5 0%, #4fbf9f 100%)', 'tip_bg' => 'linear-gradient(180deg, #effcf7 0%, #f8fffc 100%)', 'tip_border' => '#bfead9'],
+          'energy_booster' => ['bar' => 'linear-gradient(90deg, #f59e0b 0%, #ef4444 100%)', 'tip_bg' => 'linear-gradient(180deg, #fff4e8 0%, #fff9f2 100%)', 'tip_border' => '#f6d0ad'],
+          'flow_leader' => ['bar' => 'linear-gradient(90deg, #f59e0b 0%, #f97316 50%, #ef4444 100%)', 'tip_bg' => 'linear-gradient(180deg, #fff1e8 0%, #fff8f4 100%)', 'tip_border' => '#f5c2a3'],
+          'sweet_spark' => ['bar' => 'linear-gradient(90deg, #fb7185 0%, #ec4899 100%)', 'tip_bg' => 'linear-gradient(180deg, #fff0f5 0%, #fff8fb 100%)', 'tip_border' => '#f5bfd2'],
+          'elegant_calm' => ['bar' => 'linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%)', 'tip_bg' => 'linear-gradient(180deg, #f5f3ff 0%, #faf8ff 100%)', 'tip_border' => '#d8ccff'],
+          'silent_analyzer' => ['bar' => 'linear-gradient(90deg, #60a5fa 0%, #2563eb 100%)', 'tip_bg' => 'linear-gradient(180deg, #eef6ff 0%, #f8fbff 100%)', 'tip_border' => '#bdd7ff'],
+          'all_rounder' => ['bar' => 'linear-gradient(90deg, #94a3b8 0%, #64748b 100%)', 'tip_bg' => 'linear-gradient(180deg, #f4f6f8 0%, #fbfcfd 100%)', 'tip_border' => '#d7dee7'],
+        ];
+        $theme = $typeThemes[$resultView['type']] ?? $typeThemes['all_rounder'];
         $imagePath = '/wbss/public/images/cast_type_images/' . rawurlencode($resultView['type']) . '.png';
       ?>
-      <div class="cast-type-result-page">
+      <div class="cast-type-result-page" style="--result-bar-fill: <?= h($theme['bar']) ?>; --result-tip-bg: <?= h($theme['tip_bg']) ?>; --result-tip-border: <?= h($theme['tip_border']) ?>;">
         <?php if ($saveNotice !== ''): ?>
           <div class="result-notice"><?= h($saveNotice) ?></div>
         <?php endif; ?>
@@ -202,7 +213,7 @@ render_header('接客タイプ診断', [
         <div class="cast-type-result-header">
           <div>
             <h1>接客タイプ診断</h1>
-            <p class="cast-type-result-sub">今の接客スタイルを、カードで見返しやすくまとめています。</p>
+            <p class="cast-type-result-sub">今の接客スタイルを、見返しやすく整理しました。</p>
           </div>
         </div>
 
@@ -219,7 +230,6 @@ render_header('接客タイプ診断', [
             <div class="type-badge">あなたの接客タイプ</div>
             <h2 class="type-title"><?= h($resultView['type_label']) ?></h2>
             <p class="type-copy"><?= h($resultView['copy']) ?></p>
-            <p class="type-subtitle"><?= h($resultView['type_en']) ?></p>
             <p class="type-description"><?= nl2br(h($resultView['summary'])) ?></p>
             <?php if ($resultView['saved_at'] !== ''): ?>
               <div class="saved-at">保存日時: <?= h($resultView['saved_at']) ?></div>
@@ -382,7 +392,7 @@ render_header('接客タイプ診断', [
 .cast-type-result-sub{
   margin:8px 0 0;
   color:#6b7280;
-  font-size:14px;
+  font-size:13px;
   line-height:1.7;
 }
 .result-notice{
@@ -424,8 +434,8 @@ render_header('接客タイプ診断', [
   border:1px solid #edf0f5;
 }
 .card-panel--highlight{
-  background:linear-gradient(180deg, #fff7fb 0%, #ffffff 100%);
-  border:1px solid #f4d9e7;
+  background:var(--result-tip-bg, linear-gradient(180deg, #fff7fb 0%, #ffffff 100%));
+  border:1px solid var(--result-tip-border, #f4d9e7);
   box-shadow:0 20px 52px rgba(201,70,120,.12);
 }
 .type-badge{
@@ -447,18 +457,10 @@ render_header('接客タイプ診断', [
   font-weight:900;
   letter-spacing:.01em;
 }
-.type-subtitle{
-  margin:0 0 12px;
-  color:#6b7280;
-  font-size:15px;
-  font-weight:700;
-  letter-spacing:.04em;
-  text-transform:uppercase;
-}
 .type-copy{
   margin:0 0 10px;
-  font-size:22px;
-  line-height:1.5;
+  font-size:24px;
+  line-height:1.45;
   font-weight:800;
   color:#111827;
 }
@@ -471,8 +473,9 @@ render_header('接客タイプ診断', [
 .saved-at{
   margin-top:18px;
   color:#9ca3af;
-  font-size:12px;
+  font-size:11px;
   font-weight:500;
+  letter-spacing:.02em;
   padding-top:14px;
   border-top:1px solid #eef2f7;
 }
@@ -524,7 +527,7 @@ render_header('接客タイプ診断', [
 .score-bar__fill{
   height:100%;
   border-radius:999px;
-  background:linear-gradient(90deg, #f59e0b 0%, #f97316 50%, #ef4444 100%);
+  background:var(--result-bar-fill, linear-gradient(90deg, #f59e0b 0%, #f97316 50%, #ef4444 100%));
   box-shadow:0 0 0 1px rgba(255,255,255,.22) inset;
 }
 .result-grid{
@@ -544,7 +547,7 @@ render_header('接客タイプ診断', [
 }
 .today-tip{
   margin:0;
-  line-height:1.9;
+  line-height:2.05;
   font-size:16px;
   font-weight:700;
   color:#7c2d12;
