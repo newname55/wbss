@@ -229,8 +229,18 @@
 }
 
 .transportMapCanvas--screen{
-  min-height:0;
-  height:100%;
+  min-height:52vh;
+  height:52vh;
+}
+
+.transportMapScreenTop[hidden] + .transportMapScreenCanvas .transportMapCanvas--screen{
+  min-height:calc(100dvh - 170px);
+  height:calc(100dvh - 170px);
+}
+
+.transportMapScreenTop:not([hidden]) + .transportMapScreenCanvas .transportMapCanvas--screen{
+  min-height:calc(100dvh - 350px);
+  height:calc(100dvh - 350px);
 }
 
 .transportMapScreenFooter{
@@ -1621,6 +1631,17 @@ body[data-theme="staff"] .transportMapDriverToggle{
   }
 
   .transportMapCanvas--screen{
-    min-height:68vh;
+    min-height:58vh;
+    height:58vh;
+  }
+
+  .transportMapScreenTop[hidden] + .transportMapScreenCanvas .transportMapCanvas--screen{
+    min-height:calc(100dvh - 150px);
+    height:calc(100dvh - 150px);
+  }
+
+  .transportMapScreenTop:not([hidden]) + .transportMapScreenCanvas .transportMapCanvas--screen{
+    min-height:calc(100dvh - 320px);
+    height:calc(100dvh - 320px);
   }
 }
