@@ -945,10 +945,22 @@ render_header('接客マナートレーニング', [
 }
 .trainingChoice__text{font-size:14px;line-height:1.55;font-weight:800}
 .trainingFeedback{
-  margin-top:12px;padding:14px 16px;border-radius:16px;background:#111827;color:#fff;
-  opacity:0;transform:translateY(4px);position:relative;z-index:20
+  position:fixed;
+  left:50%;
+  top:50%;
+  z-index:60;
+  width:min(calc(100vw - 32px), 360px);
+  margin:0;
+  padding:14px 16px;
+  border-radius:16px;
+  background:#111827;
+  color:#fff;
+  opacity:0;
+  transform:translate(-50%, calc(-50% + 8px));
+  box-shadow:0 20px 48px rgba(15,23,42,.26);
+  pointer-events:none;
 }
-.trainingFeedback.show{opacity:1;transform:translateY(0);transition:opacity .2s ease,transform .2s ease}
+.trainingFeedback.show{opacity:1;transform:translate(-50%, -50%);transition:opacity .2s ease,transform .2s ease}
 .trainingFeedback.hidden{display:none}
 .trainingFeedback__badge{
   display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;
@@ -1165,16 +1177,8 @@ body[data-theme="dark"] .badgeToast__name{color:#fff8fc}
   .trainingResultCard__head{align-items:flex-start}
   .trainingResultCard__headActions{justify-content:flex-start}
   .trainingFeedback{
-    position:fixed;
-    left:50%;
-    top:50%;
-    width:min(calc(100vw - 32px), 360px);
-    margin:0;
-    transform:translate(-50%, calc(-50% + 8px));
-    box-shadow:0 20px 48px rgba(15,23,42,.26);
-  }
-  .trainingFeedback.show{
-    transform:translate(-50%, -50%);
+    width:min(calc(100vw - 28px), 340px);
+    padding:13px 14px;
   }
   .badgeToast{
     top:48%;

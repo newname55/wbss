@@ -598,8 +598,13 @@ render_header('接客タイプ診断', [
 }
 .serviceQuizChoice__text{font-size:15px;line-height:1.65;font-weight:800}
 .quiz-feedback{
-  margin-top:12px;
-  padding:12px 14px;
+  position:fixed;
+  left:50%;
+  top:50%;
+  z-index:60;
+  width:min(calc(100vw - 32px), 360px);
+  margin:0;
+  padding:14px 16px;
   border-radius:14px;
   background:#111827;
   color:#fff;
@@ -608,11 +613,13 @@ render_header('接客タイプ診断', [
   line-height:1.6;
   font-weight:800;
   opacity:0;
-  transform:translateY(4px);
+  transform:translate(-50%, calc(-50% + 8px));
+  box-shadow:0 20px 48px rgba(15,23,42,.26);
+  pointer-events:none;
 }
 .quiz-feedback.show{
   opacity:1;
-  transform:translateY(0);
+  transform:translate(-50%, -50%);
   transition:opacity .2s ease, transform .2s ease;
 }
 .quiz-feedback.hidden{
@@ -1134,6 +1141,10 @@ body[data-theme="dark"] .quiz-feedback{
     gap:12px;
   }
   .btn{width:100%}
+  .quiz-feedback{
+    width:min(calc(100vw - 28px), 340px);
+    padding:13px 14px;
+  }
 }
 @keyframes quizChoiceTap{
   0%{transform:scale(.98)}
