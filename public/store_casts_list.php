@@ -74,6 +74,7 @@ render_header('キャスト一覧', [
             </select>
           </form>
         <?php endif; ?>
+        <a class="btn" href="/wbss/public/admin/cast_growth.php?store_id=<?= (int)$storeId ?>">育成指示</a>
         <a class="btn" href="?store_id=<?= (int)$storeId ?>&filter=all">全員</a>
         <a class="btn" href="?store_id=<?= (int)$storeId ?>&filter=line_unlinked">LINE未連携</a>
         <a class="btn" href="?store_id=<?= (int)$storeId ?>&filter=active_only">在籍のみ</a>

@@ -375,7 +375,7 @@ function service_training_render_mission_card(array $mission, string $typeName, 
     <h2 class="trainingMissionCard__title"><?= h((string)($mission['action_text'] ?? '')) ?></h2>
     <?php if (!$compact): ?>
       <div class="trainingMissionCard__reason">
-        <strong>理由:</strong>
+        <strong>なぜこれをやるか</strong>
         <span><?= h($reasonText) ?></span>
       </div>
       <div class="trainingMissionCard__hint">今日のコツ: <?= h((string)($mission['success_hint'] ?? (string)($growthTheme['daily_tip'] ?? '1回だけ意識できれば十分です。'))) ?></div>

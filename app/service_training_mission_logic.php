@@ -209,6 +209,11 @@ function service_training_resolve_today_mission(
 }
 
 function service_training_mission_reason(array $mission): string {
+  $explicit = trim((string)($mission['reason_text'] ?? ''));
+  if ($explicit !== '') {
+    return $explicit;
+  }
+
   $reasons = [
     'conversation_entry' => '最初の空気が、その席の流れを決めるから。',
     'basic_manners' => '基本所作は、会話の前に安心感として伝わるから。',
@@ -220,7 +225,7 @@ function service_training_mission_reason(array $mission): string {
     'appearance_strategy' => '見た目の整え方が、第一印象の信頼感を支えるから。',
   ];
   $category = (string)($mission['category'] ?? '');
-  return $reasons[$category] ?? '小さな行動が、その日の接客の流れを変えるから。';
+  return $reasons[$category] ?? '小さな行動の積み重ねが、接客の印象を変えるからです。';
 }
 
 function service_training_mission_status_meta(string $status): array {
